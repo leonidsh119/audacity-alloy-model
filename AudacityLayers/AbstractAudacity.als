@@ -13,7 +13,7 @@ abstract sig Action {
 	_action : set Time
 }
 
-one sig InitAction, ImportAction, CutNoMoveAction, CutMoveAction, CutZoomInAction, PasteAction, ZoomInAction , ZoomOutAction, UndoAction, RedoAction extends Action {}
+one sig InitAction, ImportAction, CutNoMoveAction, CutMoveAction, CutZoomInAction, PasteAction, ZoomInAction , ZoomOutAction, UndoAction, RedoAction, SkipAction extends Action {}
 
 abstract sig SamplesContainer {
 	_id : ID,
@@ -222,6 +222,18 @@ pred Redo[t, t' : Time] {
 	History._present.t' = (History._present.t).add[1]
 	Equiv[t', current[t']]
 	_action.t' = RedoAction
+}
+
+// Represents a state preservation betweent to times
+pred Skip[t, t' : Time] {
+	all cont : SamplesContainer | readAllSamples[cont, t] = readAllSamples[cont, t']
+	_tracks.t' = _tracks.t
+	_start.t' = _start.t
+	_end.t' = _end.t
+	_winsamples.t' = _winsamples.t
+	_history.t' = _history.t
+	_present.t' = _present.t
+	_action.t' = SkipAction
 }
 
 

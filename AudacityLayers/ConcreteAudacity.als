@@ -60,6 +60,14 @@ pred Inv[t : Time] {
 	// all the blocks in DirManager are the blocks from Tracks and Clipboard
 }
 
+pred Cut[t, t' : Time, track : Track, from, to : Int] {
+	// TODO: Implement
+}
+
+pred Paste[t, t' : Time, track : Track, into : Int] {
+	// TODO: Implement
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                                Functions                                               //
