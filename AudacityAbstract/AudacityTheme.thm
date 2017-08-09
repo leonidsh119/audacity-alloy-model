@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<alloy>
+
+<view>
+
+<projection> <type name="Time"/> </projection>
+
+<defaultnode/>
+
+<defaultedge/>
+
+<node>
+   <type name="Action"/>
+   <type name="CutMoveAction"/>
+   <type name="CutNoMoveAction"/>
+   <type name="CutZoomInAction"/>
+   <type name="ImportAction"/>
+   <type name="InitAction"/>
+   <type name="Int"/>
+   <type name="PasteAction"/>
+   <type name="Sample"/>
+   <type name="String"/>
+   <type name="Time"/>
+   <type name="Track"/>
+   <type name="univ"/>
+   <type name="Window"/>
+   <type name="ZoomInAction"/>
+   <type name="ZoomOutAction"/>
+   <type name="ordering/Ord"/>
+   <type name="seq/Int"/>
+   <set name="this/Clipboard" type="Track"/>
+   <set name="_action" type="Action"/>
+   <set name="_tracks" type="Track"/>
+   <set name="First" type="ordering/Ord"/>
+   <set name="Next" type="ordering/Ord"/>
+</node>
+
+<edge visible="no" attribute="yes">
+   <relation name="_end"> <type name="Window"/> <type name="Int"/> </relation>
+   <relation name="_start"> <type name="Window"/> <type name="Int"/> </relation>
+</edge>
+
+</view>
+
+</alloy>
