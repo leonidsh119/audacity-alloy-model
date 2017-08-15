@@ -96,7 +96,7 @@ pred Cut[t, t' : Time, track : Track, from, to : Int] {
 
 pred CutNoMove[t, t' : Time, track : Track, from, to : Int] {
 	// Precondition
-	to.sub[from.add[1]] <= #readSamples[track, to.add[1], countAllSamples[track, t], t] // number for cut samples is SMALLER than number of sequences from the left of the visible winfow
+	to.sub[from.add[1]] <= countSamples[track, to.add[1], countAllSamples[track, t], t] // number for cut samples is SMALLER than number of sequences from the left of the visible winfow
 
 	// Preserved
 	_start.t' = _start.t // use the same window size and location in track
@@ -109,8 +109,8 @@ pred CutNoMove[t, t' : Time, track : Track, from, to : Int] {
 
 pred CutMove[t, t' : Time, track : Track, from, to : Int] {
 	// Precondition
-	to.sub[from.add[1]] > #readSamples[track, to.add[1], countAllSamples[track, t], t] // number for cut samples is LARGER than number of sequences from the left of the visible winfow, but...
-	to.sub[from.add[1]] <= #readSamples[track, to.add[1], countAllSamples[track, t], t].add[#readSamples[track, 0, from.sub[1], t]] // number for cut samples is SMALLER than number of sequences from the left AND from the right of the visible winfow, but...
+	to.sub[from.add[1]] > countSamples[track, to.add[1], countAllSamples[track, t], t] // number for cut samples is LARGER than number of sequences from the left of the visible winfow, but...
+	to.sub[from.add[1]] <= countSamples[track, to.add[1], countAllSamples[track, t], t].add[countSamples[track, 0, from.sub[1], t]] // number for cut samples is SMALLER than number of sequences from the left AND from the right of the visible winfow, but...
 
 	// Preserved
 	_end.t' = _end.t // visible vindow is moved to the end of the track
@@ -123,7 +123,7 @@ pred CutMove[t, t' : Time, track : Track, from, to : Int] {
 
 pred CutZoomIn[t, t' : Time, track : Track, from, to : Int] {
 	// Precondition
-	to.sub[from.add[1]] > #readSamples[track, to.add[1], countAllSamples[track, t], t].add[#readSamples[track, 0, from.sub[1], t]] // number for cut samples is LARGER than number of sequences from the left AND from the right of the visible winfow
+	to.sub[from.add[1]] > countSamples[track, to.add[1], countAllSamples[track, t], t].add[countSamples[track, 0, from.sub[1], t]] // number for cut samples is LARGER than number of sequences from the left AND from the right of the visible winfow
 
 	// Updated
 	_start.t' = _start.t ++ track._window -> 0 // the visible window shrinking to display all the remaining samples
@@ -296,11 +296,11 @@ fun lastContSampleIdx[cont : SamplesContainer, t : Time] : Int {
 }
 
 fun countAllSamples[cont : SamplesContainer, t : Time] : Int {
-	#(cont._samples.t)
+	#readAllSamples[cont, t]
 }
 
 fun countSamples[cont : SamplesContainer, from, to : Int, t : Time] : Int {
-	#subseq[cont._samples.t, from, to]
+	#readSamples[cont, from, to, t]
 }
 
 fun current[t : Time] : Time {

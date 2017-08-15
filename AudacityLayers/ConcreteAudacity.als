@@ -24,8 +24,6 @@ sig Track extends BlockFileContainer {
 	_tracks : set Time
 }
 
-one sig DirManager extends BlockFileContainer {}
-
 one sig Clipboard extends BlockFileContainer {}
 
 
@@ -62,6 +60,7 @@ pred Inv[t : Time] {
 
 pred Cut[t, t' : Time, track : Track, from, to : Int] {
 	// TODO: Implement
+// What interface??
 }
 
 pred Paste[t, t' : Time, track : Track, into : Int] {
