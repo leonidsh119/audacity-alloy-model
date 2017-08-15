@@ -51,7 +51,6 @@ pred Import[t, t' : Time, track : Track] {
 pred Init[t : Time] {
 	no _tracks.t
 	no Clipboard._blocks.t
-	no DirManager._blocks.t
 }
 
 pred Inv[t : Time] {
@@ -60,17 +59,85 @@ pred Inv[t : Time] {
 
 pred Cut[t, t' : Time, track : Track, from, to : Int] {
 	// TODO: Implement
-// What interface??
 }
 
 pred Paste[t, t' : Time, track : Track, into : Int] {
 	// TODO: Implement
 }
 
+pred Split[cont : BlockFileContainer, blockIdx : Int, head, tail : BlockFile, t, t' : Time] {
+	// Precondition
+	countAllBlocks[cont, t] > 1
+	blockIdx >= 0
+	blockIdx < countAllBlocks[cont, t]
+	(#(head._samples)).add[#(tail._samples)] > 1
+
+	let block = blockForBlockIndex[cont, blockIdx, t] | {
+		// Precondition
+		block._samples = append[head._samples, tail._samples]
+
+		// Preserved
+		all bfc : BlockFileContainer | readAllSamples[bfc, t'] = readAllSamples[bfc, t]
+		_tracks.t' = _tracks.t
+
+		// Updated
+		_blocks.t' = _blocks.t ++ cont -> insert[insert[cont._blocks.t, blockIdx, tail], blockIdx, head]
+	}
+}
+
+pred Insert[cont : BlockFileContainer, blockIdx : Int, emptyBlock : BlockFile, t, t' : Time] {
+	// Precondition
+	countAllBlocks[cont, t] > 1
+	blockIdx >= 0
+	blockIdx < countAllBlocks[cont, t]
+	#(emptyBlock._samples) = 0
+
+	// Preserved
+	all bfc : BlockFileContainer | readAllSamples[bfc, t'] = readAllSamples[bfc, t]
+	_tracks.t' = _tracks.t
+
+	// Updated
+	_blocks.t' = _blocks.t ++ cont -> insert[cont._blocks.t, blockIdx, emptyBlock]
+}
+
+pred Delete[cont : BlockFileContainer, blockIdx : Int, t, t' : Time] {
+	// Precondition
+	countAllBlocks[cont, t] > 1
+	blockIdx >= 0
+	blockIdx < countAllBlocks[cont, t]
+	#(blockForBlockIndex[cont, blockIdx, t]._samples) = 0
+
+	// Preserved
+	all bfc : BlockFileContainer | readAllSamples[bfc, t'] = readAllSamples[bfc, t]
+	_tracks.t' = _tracks.t
+
+	// Updated
+	_blocks.t' = _blocks.t ++ cont -> delete[cont._blocks.t, blockIdx]
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                                Functions                                               //
 ////////////////////////////////////////////////////////////////////////////////////////////
+
+fun lastBlockIndex[cont : BlockFileContainer, t : Time] : Int {
+	countAllBlocks[cont, t].sub[1]
+}
+
+fun countBlocks[cont : BlockFileContainer, from, to : Int, t : Time] : Int {
+	#readBlocks[cont, from, to, t]
+}
+
+fun readBlocks[cont : BlockFileContainer, from, to : Int, t : Time] : seq BlockFile {
+	subseq[readAllBlocks[cont, t], from, to]
+}
+
+fun countAllBlocks[cont : BlockFileContainer, t : Time] : Int {
+	#readAllBlocks[cont, t]
+}
+
+fun readAllBlocks[cont : BlockFileContainer, t : Time] : seq BlockFile {
+	cont._blocks.t
+}
 
 fun readAllSamples[cont : BlockFileContainer, t : Time] : seq Sample {
 	let blocksCount = #(cont._blocks.t), lastSampleIndex = prec[cont, blocksCount, t] |
@@ -95,7 +162,12 @@ fun sampleIndexInBlockForSampleIndex[cont : BlockFileContainer, sampleIdx : Int,
 
 // For the given sample index in the entire track provides the block the sample belongs to
 fun blockForSampleIndex[cont : BlockFileContainer, sampleIdx : Int, t : Time] : BlockFile {
-	(cont._blocks.t)[blockIndexForSampleIndex[cont, sampleIdx, t]]
+	let blockIdx = blockIndexForSampleIndex[cont, sampleIdx, t] |
+		blockForBlockIndex[cont, blockIdx, t]
+}
+
+fun blockForBlockIndex[cont : BlockFileContainer, blockIdx : Int, t : Time] : BlockFile {
+		(cont._blocks.t)[blockIdx]
 }
 
 // For the given sample index in the entire track provides the block index the sample belongs to
