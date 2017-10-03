@@ -55,14 +55,68 @@ pred Init[t : Time] {
 
 pred Inv[t : Time] {
 	// all the blocks in DirManager are the blocks from Tracks and Clipboard
+	// Others?
 }
 
 pred Cut[t, t' : Time, track : Track, from, to : Int] {
-	// TODO: Implement
+// Abstract Model
+	// Precondition
+	track in _tracks.t // the track belongs to the project's tracks list
+	from <= to // there are at least one sample selected to cut
+	from >= 0
+	to <= countAllSamples[track, t]
+
+	// Preserved
+	_tracks.t' = _tracks.t
+	all otherTrack : _tracks.t' - track | readAllSamples[otherTrack, t'] = readAllSamples[otherTrack, t]
+
+// Concrete Model
+	let firstCutBlockIndex = blockIndexForSampleIndex[track, from, t],  lastCutBlockIndex = blockIndexForSampleIndex[track, to, t] | {
+		// Precondition
+		all block : track._blocks.t | #(block._samples) > 0
+		sampleIndexInBlockForSampleIndex[track, from, t] = 0 // "from" is the first sample in its block
+		sampleIndexInBlockForSampleIndex[track, to, t] = sub[#(blockForBlockIndex[track, lastCutBlockIndex, t]._samples), 1] // "to" is the last sample in its block
+		countAllBlocks[Clipboard, t] = sub[lastCutBlockIndex, firstCutBlockIndex] // required number of blocks in clipboard. what skip action achieves that?
+
+		// Preserved
+		_blocks.t' = _blocks.t
+		all otherTrack : _tracks.t' - track, block : otherTrack._blocks | block.t'._samples = block.t._samples
+		all i : range[0, countAllBlocks[track, t]] - range[firstCutBlockIndex, lastCutBlockIndex] | blockForBlockIndex[track, i, t']._samples = blockForBlockIndex[track, i, t]._samples
+
+		// Updated
+		all i : range[firstCutBlockIndex, lastCutBlockIndex] | #(blockForBlockIndex[track, i, t']._samples) = 0
+		all i : range[firstCutBlockIndex, lastCutBlockIndex] | blockForBlockIndex[Clipboard, sub[i, firstCutBlockIndex], t']._samples = blockForBlockIndex[track, i, t]._samples
+	}
 }
 
+// NOTE: this operation has stronger precondition than in abstract model to ensure that all the required effects of Skip functions is done.
+// However the Update part is the same.
 pred Paste[t, t' : Time, track : Track, into : Int] {
-	// TODO: Implement
+// Abstract Model
+	// Precondition
+	track in _tracks.t // the track belongs to the project's tracks list
+	into >= 0
+	into <= countAllSamples[track, t]
+
+	// Preserved
+	_tracks.t' = _tracks.t
+	all otherTrack : _tracks.t' - track | readAllSamples[otherTrack, t'] = readAllSamples[otherTrack, t]
+
+// Concrete Model
+	let firstEmptyBlockIndex = add[blockIndexForSampleIndex[track, sub[into, 1], t], 1],  lastEmptyBlockIndex = add[firstEmptyBlockIndex, countAllBlocks[Clipboard, t]] | {
+		// Precondition
+		all i : range[firstEmptyBlockIndex, lastEmptyBlockIndex] | #(blockForBlockIndex[track, i, t]._samples) = 0
+		all i : range[0, countAllBlocks[track, t]] - range[firstEmptyBlockIndex, lastEmptyBlockIndex] | #(blockForBlockIndex[track, i, t]._samples) > 0
+
+		// Preserved
+		_blocks.t' = _blocks.t
+		all otherTrack : _tracks.t' - track, block : otherTrack._blocks | block.t'._samples = block.t._samples
+		all block : Clipboard._blocks | block.t'._samples = block.t._samples
+		all i : range[0, countAllBlocks[track, t]] - range[firstEmptyBlockIndex, lastEmptyBlockIndex] | blockForBlockIndex[track, i, t']._samples = blockForBlockIndex[track, i, t]._samples
+
+		// Updated
+		all i : range[firstEmptyBlockIndex, lastEmptyBlockIndex] | blockForBlockIndex[track, i, t']._samples = blockForBlockIndex[Clipboard, sub[i, firstEmptyBlockIndex], t]._samples
+	}
 }
 
 pred Split[cont : BlockFileContainer, blockIdx : Int, head, tail : BlockFile, t, t' : Time] {
@@ -139,9 +193,17 @@ fun readAllBlocks[cont : BlockFileContainer, t : Time] : seq BlockFile {
 	cont._blocks.t
 }
 
+fun countAllSamples[cont : BlockFileContainer, t : Time] : Int {
+	#readAllSamples[cont, t]
+}
+
 fun readAllSamples[cont : BlockFileContainer, t : Time] : seq Sample {
 	let blocksCount = #(cont._blocks.t), lastSampleIndex = prec[cont, blocksCount, t] |
 		readSamples[cont, 0, lastSampleIndex, t]
+}
+
+fun countSamples[cont : BlockFileContainer, from, to : Int, t : Time] : Int {
+	#readSamples[cont, from, to, t]
 }
 
 // NOTE: This method is the refinement of AbstractAudacityLayers model
