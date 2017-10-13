@@ -84,7 +84,7 @@ pred Cut[t, t' : Time, track : Track, from, to : Int] {
 		all i : range[0, countAllBlocks[track, t]] - range[firstCutBlockIndex, lastCutBlockIndex] | blockForBlockIndex[track, i, t']._samples = blockForBlockIndex[track, i, t]._samples
 
 		// Updated
-		all i : range[firstCutBlockIndex, lastCutBlockIndex] | #(blockForBlockIndex[track, i, t']._samples) = 0
+		all i : range[firstCutBlockIndex, lastCutBlockIndex] | no blockForBlockIndex[track, i, t']._samples
 		all i : range[firstCutBlockIndex, lastCutBlockIndex] | blockForBlockIndex[Clipboard, sub[i, firstCutBlockIndex], t']._samples = blockForBlockIndex[track, i, t]._samples
 	}
 }
