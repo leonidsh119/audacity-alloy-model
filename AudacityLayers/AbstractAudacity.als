@@ -88,14 +88,14 @@ pred Cut[t, t' : Time, track : Track, from, to : Int] {
 	_tracks.t' = _tracks.t
 	all otherTrack : _tracks.t' - track | readAllSamples[otherTrack, t'] = readAllSamples[otherTrack, t]
 
+	// Handle different cases
+	CutNoMove[t, t', track, from, to] or CutMove[t, t', track, from, to] or CutZoomIn[t, t', track, from, to]
+
 	// Updated
 	readSamples[track, 0, from.sub[1], t'] = readSamples[track, 0, from.sub[1], t]
 	readAllSamples[Clipboard, t'] = readSamples[track, from, to, t]
 	readSamples[track, from, lastContSampleIdx[track, t'], t'] = readSamples[track, to.add[1], lastContSampleIdx[track, t], t]
 	ChangeHistory[t, t']
-
-	// Handle different cases
-	CutNoMove[t, t', track, from, to] or CutMove[t, t', track, from, to] or CutZoomIn[t, t', track, from, to]
 }
 
 pred CutNoMove[t, t' : Time, track : Track, from, to : Int] {
@@ -144,9 +144,9 @@ pred Paste[t, t' : Time, track : Track, into : Int] {
 
 	// Preserved
 	_tracks.t' = _tracks.t
+	all otherTrack : _tracks.t' - track | readAllSamples[otherTrack, t'] = readAllSamples[otherTrack, t]
 	_start.t' = _start.t // use the same window size and location in track
 	_end.t' = _end.t // use the same window size and location in track
-	all otherTrack : _tracks.t' - track | readAllSamples[otherTrack, t'] = readAllSamples[otherTrack, t]
 
 	// Updated
 	readSamples[track, 0, into.sub[1], t'] = readSamples[track, 0, into.sub[1], t]

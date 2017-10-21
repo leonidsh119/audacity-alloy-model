@@ -82,18 +82,55 @@ pred Cut[t, t' : Time, track : Track, from, to : Int] {
 	}
 }
 
+pred CutNoMove[t, t' : Time, track : Track, from, to : Int] {
+	// Precondition
+	to.sub[from.add[1]] <= countSamples[track, to.add[1], countAllSamples[track, t], t] // number for cut samples is SMALLER than number of sequences from the left of the visible winfow
+
+	// Preserved
+	_start.t' = _start.t // use the same window size and location in track
+	_end.t' = _end.t // use the same window size and location in track
+
+	// Updated
+	_winsamples.t' = _winsamples.t ++ track._window -> readSamples[track, track._window._start.t', track._window._end.t', t'] // Refresh displayed samples according to the remaining window start and end, but with the new track samples sequence
+}
+
+pred CutMove[t, t' : Time, track : Track, from, to : Int] {
+	// Precondition
+	to.sub[from.add[1]] > countSamples[track, to.add[1], countAllSamples[track, t], t] // number for cut samples is LARGER than number of sequences from the left of the visible winfow, but...
+	to.sub[from.add[1]] <= countSamples[track, to.add[1], countAllSamples[track, t], t].add[countSamples[track, 0, from.sub[1], t]] // number for cut samples is SMALLER than number of sequences from the left AND from the right of the visible winfow, but...
+
+	// Preserved
+	_end.t' = _end.t // visible vindow is moved to the end of the track
+
+	// Updated
+	_start.t' = _start.t ++ track._window -> track._window._end.t'.sub[track._window._end.t.sub[track._window._start.t]] // moved visible window size is preserved
+	_winsamples.t' = _winsamples.t ++ track._window -> readSamples[track, track._window._start.t', track._window._end.t', t'] // Refresh displayed samples according to the remaining window start and end, but with the new track samples sequence
+}
+
+pred CutZoomIn[t, t' : Time, track : Track, from, to : Int] {
+	// Precondition
+	to.sub[from.add[1]] > countSamples[track, to.add[1], countAllSamples[track, t], t].add[countSamples[track, 0, from.sub[1], t]] // number for cut samples is LARGER than number of sequences from the left AND from the right of the visible winfow
+
+	// Updated
+	_start.t' = _start.t ++ track._window -> 0 // the visible window shrinking to display all the remaining samples
+	_end.t' = _end.t ++ track._window -> countAllSamples[track, t'] // the visible window shrinking to display all the remaining samples
+	_winsamples.t' = _winsamples.t ++ track._window -> readAllSamples[track, t']
+}
+
 // NOTE: this operation has stronger precondition than in abstract model to ensure that all the required effects of Skip functions is done.
 // However the Update part is the same.
 pred Paste[t, t' : Time, track : Track, into : Int] {
 // Abstract Model
 	// Precondition
 	track in _tracks.t // the track belongs to the project's tracks list
-	into >= 0
-	into <= countAllSamples[track, t]
+	track._window._start.t <= into // the paste location is in the visible window (start)
+	track._window._end.t >= into // the paste location is in the visible window (end)
 
 	// Preserved
 	_tracks.t' = _tracks.t
 	all otherTrack : _tracks.t' - track | readAllSamples[otherTrack, t'] = readAllSamples[otherTrack, t]
+	_start.t' = _start.t // use the same window size and location in track
+	_end.t' = _end.t // use the same window size and location in track
 
 // Concrete Model
 	let firstEmptyBlockIndex = add[blockIndexForSampleIndex[track, sub[into, 1], t], 1],  lastEmptyBlockIndex = add[firstEmptyBlockIndex, countAllBlocks[Clipboard, t]] | {
