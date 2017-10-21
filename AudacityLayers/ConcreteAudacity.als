@@ -44,20 +44,6 @@ pred Import[t, t' : Time, track : Track] {
 	_tracks.t' = _tracks.t + track
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////
-//                                         Invariant Predicates                                     //
-////////////////////////////////////////////////////////////////////////////////////////////
-
-pred Init[t : Time] {
-	no _tracks.t
-	no Clipboard._blocks.t
-}
-
-pred Inv[t : Time] {
-	// all the blocks in DirManager are the blocks from Tracks and Clipboard
-	// Others?
-}
-
 pred Cut[t, t' : Time, track : Track, from, to : Int] {
 // Abstract Model
 	// Precondition
@@ -170,6 +156,20 @@ pred Delete[cont : BlockFileContainer, blockIdx : Int, t, t' : Time] {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
+//                                         Invariant Predicates                                     //
+////////////////////////////////////////////////////////////////////////////////////////////
+
+pred Init[t : Time] {
+	no _tracks.t
+	no Clipboard._blocks.t
+}
+
+pred Inv[t : Time] {
+	// all the blocks in DirManager are the blocks from Tracks and Clipboard
+	// Others?
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////
 //                                                Functions                                               //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -191,6 +191,10 @@ fun countAllBlocks[cont : BlockFileContainer, t : Time] : Int {
 
 fun readAllBlocks[cont : BlockFileContainer, t : Time] : seq BlockFile {
 	cont._blocks.t
+}
+
+fun lastContSampleIdx[cont : BlockFileContainer, t : Time] : Int {
+	countAllSamples[cont, t].sub[1]
 }
 
 fun countAllSamples[cont : BlockFileContainer, t : Time] : Int {
