@@ -21,7 +21,14 @@ abstract sig BlockFileContainer {
 }
 
 sig Track extends BlockFileContainer {
-	_tracks : set Time
+	_tracks : set Time,
+	_window : Window
+}
+
+sig Window {
+	_start : Int -> Time,
+	_end : Int -> Time,
+	_winsamples : (seq BlockFile) -> Time
 }
 
 one sig Clipboard extends BlockFileContainer {}
