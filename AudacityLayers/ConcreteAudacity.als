@@ -11,6 +11,12 @@ let MAX_BLOCK_SIZE = 4
 
 sig Time {}
 
+abstract sig Action {
+	_action : set Time
+}
+
+one sig InitAction, ImportAction, CutNoMoveAction, CutMoveAction, CutZoomInAction, PasteAction, SplitAction, InsertAction, DeleteAction extends Action {}
+
 sig BlockFile {
 	_samples : seq Sample
 } { #_samples <= MAX_BLOCK_SIZE }
@@ -49,6 +55,7 @@ pred Import[t, t' : Time, track : Track] {
 
 	// Updated
 	_tracks.t' = _tracks.t + track
+	_action.t' = ImportAction
 }
 
 pred Cut[t, t' : Time, track : Track, from, to : Int] {
@@ -92,6 +99,7 @@ pred CutNoMove[t, t' : Time, track : Track, from, to : Int] {
 
 	// Updated
 	_winsamples.t' = _winsamples.t ++ track._window -> readSamples[track, track._window._start.t', track._window._end.t', t'] // Refresh displayed samples according to the remaining window start and end, but with the new track samples sequence
+	_action.t = CutNoMoveAction
 }
 
 pred CutMove[t, t' : Time, track : Track, from, to : Int] {
@@ -105,6 +113,7 @@ pred CutMove[t, t' : Time, track : Track, from, to : Int] {
 	// Updated
 	_start.t' = _start.t ++ track._window -> track._window._end.t'.sub[track._window._end.t.sub[track._window._start.t]] // moved visible window size is preserved
 	_winsamples.t' = _winsamples.t ++ track._window -> readSamples[track, track._window._start.t', track._window._end.t', t'] // Refresh displayed samples according to the remaining window start and end, but with the new track samples sequence
+	_action.t = CutMoveAction
 }
 
 pred CutZoomIn[t, t' : Time, track : Track, from, to : Int] {
@@ -115,6 +124,7 @@ pred CutZoomIn[t, t' : Time, track : Track, from, to : Int] {
 	_start.t' = _start.t ++ track._window -> 0 // the visible window shrinking to display all the remaining samples
 	_end.t' = _end.t ++ track._window -> countAllSamples[track, t'] // the visible window shrinking to display all the remaining samples
 	_winsamples.t' = _winsamples.t ++ track._window -> readAllSamples[track, t']
+	_action.t = CutZoomInAction
 }
 
 // NOTE: this operation has stronger precondition than in abstract model to ensure that all the required effects of Skip functions is done.
@@ -146,6 +156,7 @@ pred Paste[t, t' : Time, track : Track, into : Int] {
 
 		// Updated
 		all i : range[firstEmptyBlockIndex, lastEmptyBlockIndex] | blockForBlockIndex[track, i, t']._samples = blockForBlockIndex[Clipboard, sub[i, firstEmptyBlockIndex], t]._samples
+		_action.t = PasteAction
 	}
 }
 
@@ -167,6 +178,7 @@ pred Split[cont : BlockFileContainer, blockIdx : Int, head, tail : BlockFile, t,
 		// Updated
 		_blocks.t' = _blocks.t ++ cont -> insert[insert[cont._blocks.t, blockIdx, tail], blockIdx, head]
 	}
+	_action.t = SplitAction
 }
 
 pred Insert[cont : BlockFileContainer, blockIdx : Int, emptyBlock : BlockFile, t, t' : Time] {
@@ -182,6 +194,7 @@ pred Insert[cont : BlockFileContainer, blockIdx : Int, emptyBlock : BlockFile, t
 
 	// Updated
 	_blocks.t' = _blocks.t ++ cont -> insert[cont._blocks.t, blockIdx, emptyBlock]
+	_action.t = InsertAction
 }
 
 pred Delete[cont : BlockFileContainer, blockIdx : Int, t, t' : Time] {
@@ -197,6 +210,7 @@ pred Delete[cont : BlockFileContainer, blockIdx : Int, t, t' : Time] {
 
 	// Updated
 	_blocks.t' = _blocks.t ++ cont -> delete[cont._blocks.t, blockIdx]
+	_action.t = DeleteAction
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////
