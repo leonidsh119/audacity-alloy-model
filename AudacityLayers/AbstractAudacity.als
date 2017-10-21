@@ -78,7 +78,9 @@ pred Import[t, t' : Time, track : Track] {
 pred Cut[t, t' : Time, track : Track, from, to : Int] {
 	// Precondition
 	track in _tracks.t // the track belongs to the project's tracks list
-	from <= to // there are at least one sample selected to cut
+	from >= 0
+	to >= from // there are at least one sample selected to cut
+	to <= countAllSamples[track, t]
 	track._window._start.t <= from // the first sample to cut is in the visible window
 	track._window._end.t >= to // the last sample to cut is in the visible window
 
@@ -90,8 +92,10 @@ pred Cut[t, t' : Time, track : Track, from, to : Int] {
 	readSamples[track, 0, from.sub[1], t'] = readSamples[track, 0, from.sub[1], t]
 	readAllSamples[Clipboard, t'] = readSamples[track, from, to, t]
 	readSamples[track, from, lastContSampleIdx[track, t'], t'] = readSamples[track, to.add[1], lastContSampleIdx[track, t], t]
-	CutNoMove[t, t', track, from, to] or CutMove[t, t', track, from, to] or CutZoomIn[t, t', track, from, to]
 	ChangeHistory[t, t']
+
+	// Handle different cases
+	CutNoMove[t, t', track, from, to] or CutMove[t, t', track, from, to] or CutZoomIn[t, t', track, from, to]
 }
 
 pred CutNoMove[t, t' : Time, track : Track, from, to : Int] {
