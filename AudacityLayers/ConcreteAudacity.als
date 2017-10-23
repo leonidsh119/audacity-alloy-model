@@ -73,7 +73,7 @@ pred Cut[t, t' : Time, track : Track, from, to : Int] {
 // Concrete Model
 	let firstCutBlockIndex = blockIndexForSampleIndex[track, from, t],  lastCutBlockIndex = blockIndexForSampleIndex[track, to, t] | {
 		// Precondition
-		all block : track._blocks.t | #(block._samples) > 0
+		all block : track._blocks.t[Int] | #(block._samples) > 0
 		sampleIndexInBlockForSampleIndex[track, from, t] = 0 // "from" is the first sample in its block
 		sampleIndexInBlockForSampleIndex[track, to, t] = sub[#(blockForBlockIndex[track, lastCutBlockIndex, t]._samples), 1] // "to" is the last sample in its block
 		countAllBlocks[Clipboard, t] = sub[lastCutBlockIndex, firstCutBlockIndex] // required number of blocks in clipboard. what skip action achieves that?
@@ -322,8 +322,10 @@ fact {
 fact {
 	Init[first]
 	all t, t' : Time | t -> t' in next => 
-		some track : Track |
+		some track : Track, i, j : Int |
 			Import[t, t', track]
+			or Cut[t, t', track, i, j]
+			or Paste[t, t', track, i]
 }
 
 
@@ -333,8 +335,8 @@ fact {
 
 run { 
 	#(BlockFile._samples) >= 2
-} for 7 but 3 Time, 7 Int
+} for 3 but 5 Time, 7 Int
 
 check {
 	all t : Time | Inv[t]
-} for 5
+} for 3 but 2 Track, 2 Sample, 2 Window, 5 seq, 5 Time, 7 Int

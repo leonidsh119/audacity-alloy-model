@@ -1,10 +1,18 @@
 
+////////////////////////////////////////////////////////////////////////////////////////////
+//                                             Signatures                                                //
+////////////////////////////////////////////////////////////////////////////////////////////
+
 sig Block {
 	samples : seq Sample
 }
 
 sig Sample {
 }
+
+////////////////////////////////////////////////////////////////////////////////////////////
+//                                             Predicates                                                //
+////////////////////////////////////////////////////////////////////////////////////////////
 
 pred concat[blocks : seq Block, result : seq Sample] {
 
@@ -26,7 +34,9 @@ pred monotonic[s : seq Int] {
 	all i, j : s.Int | int[i] <= int[j] =>s[i] <= s[j]
 }
 
-run { some blocks : seq Block, result : seq Sample | concat[blocks, result] }
+run { 
+	some blocks : seq Block, result : seq Sample | concat[blocks, result] 
+}
 
 // ---
 
