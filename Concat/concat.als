@@ -10,6 +10,7 @@ sig Block {
 sig Sample {
 }
 
+
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                             Predicates                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -34,11 +35,14 @@ pred monotonic[s : seq Int] {
 	all i, j : s.Int | int[i] <= int[j] =>s[i] <= s[j]
 }
 
-run { 
-	some blocks : seq Block, result : seq Sample | concat[blocks, result] 
+pred read_the_same[blocks : seq Block, s : seq Sample] {
+	#s = prec[blocks, #blocks]
+	all i : s.Sample | read_samples[s, i] = read_samples_from_blocks[blocks, i]
 }
 
-// ---
+////////////////////////////////////////////////////////////////////////////////////////////
+//                                                Functions                                               //
+////////////////////////////////////////////////////////////////////////////////////////////
 
 fun read_samples[s : seq Sample, i : Int] : Sample {
 	s[i]
@@ -61,10 +65,10 @@ fun range[from, upto:Int] : set Int {
 	{ n : Int | from <= n && n < upto }
 }
 
-pred read_the_same[blocks : seq Block, s : seq Sample] {
-	#s = prec[blocks, #blocks]
-	all i : s.Sample | read_samples[s, i] = read_samples_from_blocks[blocks, i]
-}
+
+////////////////////////////////////////////////////////////////////////////////////////////
+//                                              Assertions                                               //
+////////////////////////////////////////////////////////////////////////////////////////////
 
 check {
 	all blocks : seq Block, result : seq Sample | 
@@ -74,4 +78,8 @@ check {
 check {
 	all blocks : seq Block, result : seq Sample | 
 		read_the_same[blocks, result] => concat[blocks, result]
+}
+
+run { 
+	some blocks : seq Block, result : seq Sample | concat[blocks, result] 
 }
