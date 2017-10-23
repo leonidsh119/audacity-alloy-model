@@ -32,3 +32,19 @@ check {
 	all at, at' : AbstractAudacity/Time, ct, ct' : ConcreteAudacity/Time | 
 		(retrieve[at, ct] and retrieve[at', ct']) => (all cont : BlockFileContainer,  blockIdx : Int | ConcreteAudacity/Delete[cont, blockIdx, ct, ct'] => AbstractAudacity/Skip[at, at'])
 } 
+
+
+// Asserts for Sample-wise equality between sequence of Blocks and a sequence of Samples
+pred concat[aCont : AbstractAudacity/SamplesContainer, at : AbstractAudacity/Time, cCont : ConcreteAudacity/BlockFileContainer, ct : ConcreteAudacity/Time] {
+	#(aCont._samples.at) = (sum i : cCont._blocks.BlockFile | #cCont[i]._samples) // compare total number of samples in both models
+	some offsets : seq Int | {
+		all i, j : offsets.Int | int[i] <= int[j] =>offsets[i] <= offsets[j] // Monotonic
+		offsets.Int in aCont.Sample
+		all i : cCont.BlockFile | {
+			aCont.subseq[offsets[i], #cCont[i]._samples] = cConts[i]._samples
+		}
+		all i : blocks.BlockFile - 0 | {
+			offsets[i].sub[offsets[i.sub[1]]] = #cConts[i]._samples // offsets[i] - offsets[i-1] = # blocks[i]._samples
+		}
+	}
+}
