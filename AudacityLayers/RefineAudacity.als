@@ -36,15 +36,15 @@ check {
 
 // Asserts for Sample-wise equality between sequence of Blocks and a sequence of Samples
 pred concat[aCont : AbstractAudacity/SamplesContainer, at : AbstractAudacity/Time, cCont : ConcreteAudacity/BlockFileContainer, ct : ConcreteAudacity/Time] {
-	#(aCont._samples.at) = (sum i : cCont._blocks.BlockFile | #cCont[i]._samples) // compare total number of samples in both models
+	#(aCont._samples.at) = (sum i : (cCont._blocks.ct).BlockFile | #(cCont._blocks.ct)[i]._samples) // compare total number of samples in both models
 	some offsets : seq Int | {
 		all i, j : offsets.Int | int[i] <= int[j] =>offsets[i] <= offsets[j] // Monotonic
-		offsets.Int in aCont.Sample
-		all i : cCont.BlockFile | {
-			aCont.subseq[offsets[i], #cCont[i]._samples] = cConts[i]._samples
+		offsets.Int in (aCont._samples.at).Sample
+		all i : (cCont._blocks.ct).BlockFile | {
+			(aCont._samples.at).subseq[offsets[i], #(cCont._blocks.ct)[i]._samples] = (cCont._blocks.ct)[i]._samples
 		}
-		all i : blocks.BlockFile - 0 | {
-			offsets[i].sub[offsets[i.sub[1]]] = #cConts[i]._samples // offsets[i] - offsets[i-1] = # blocks[i]._samples
+		all i : (cCont._blocks.ct).BlockFile - 0 | {
+			offsets[i].sub[offsets[i.sub[1]]] = #(cCont._blocks.ct)[i]._samples // offsets[i] - offsets[i-1] = # blocks[i]._samples
 		}
 	}
 }
