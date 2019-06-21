@@ -1,27 +1,17 @@
 module AbstractAudacity
 
-open CommonAudacity
-open util/ordering[Time]
+open Common
+open Time
+open History
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                             Signatures                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-sig Time {}
-
-abstract sig Action {
-	_action : set Time
-}
-
-one sig InitAction, ImportAction, CutNoMoveAction, CutMoveAction, CutZoomInAction, PasteAction, ZoomInAction , ZoomOutAction, UndoAction, RedoAction, SkipAction extends Action {}
-
 abstract sig SamplesContainer {
 	_id : ID,
 	_samples : (seq Sample) -> Time
-}
-
-one sig Clipboard extends SamplesContainer {
-
 }
 
 sig Track extends SamplesContainer {
@@ -34,10 +24,7 @@ sig Window extends SamplesContainer {
 	_end : Int -> Time
 }
 
-one sig History {
-	_history : (seq Time) -> Time,
-	_present : Int -> Time
-}
+one sig Clipboard extends SamplesContainer {}
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -295,10 +282,6 @@ fun countAllSamples[cont : SamplesContainer, t : Time] : Int {
 
 fun countSamples[cont : SamplesContainer, from, to : Int, t : Time] : Int {
 	#readSamples[cont, from, to, t]
-}
-
-fun current[t : Time] : Time {
-	(History._history.t)[History._present.t]
 }
 
 

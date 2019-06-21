@@ -1,21 +1,15 @@
 module ConcreteAudacity
 
-open CommonAudacity
-open util/ordering[Time]
+open Common
+open Time
+open History
 
 let MAX_BLOCK_SIZE = 4
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                             Signatures                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////
-
-sig Time {}
-
-abstract sig Action {
-	_action : set Time
-}
-
-one sig InitAction, ImportAction, CutNoMoveAction, CutMoveAction, CutZoomInAction, PasteAction, SplitAction, InsertAction, DeleteAction extends Action {}
 
 sig BlockFile {
 	_samples : seq Sample

@@ -1,4 +1,4 @@
-module CommonAudacity
+module Common
 
 sig Sample {}
 
