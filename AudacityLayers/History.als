@@ -22,7 +22,7 @@ pred Init[t : Time] {
 	History._present.t = 0
 }
 
-pred ChangeHistory[t, t' : Time] {
+pred Advance[t, t' : Time] {
 	History._history.t' = ((History._history.t).subseq[0, History._present.t]).add[t']  
 	History._present.t' = (History._present.t).add[1] 
 }
