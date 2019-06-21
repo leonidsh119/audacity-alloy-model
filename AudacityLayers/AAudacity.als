@@ -1,35 +1,51 @@
-module AbstractAudacity
+module AAudacity
 
-open Common
 open Time
 open History
+open AContainer
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                             Signatures                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-abstract sig SamplesContainer {
-	_id : ID,
-	_samples : (seq Sample) -> Time
-}
-
-sig Track extends SamplesContainer {
-	_tracks : set Time,
-	_window : Window
-}
-
-sig Window extends SamplesContainer {
+sig Window extends AContainer {
 	_start : Int -> Time,
 	_end : Int -> Time
 }
 
-one sig Clipboard extends SamplesContainer {}
+sig Track extends AContainer {
+	_tracks : set Time,
+	_window : Window
+}
+
+fact {
+	_window in Track one -> Window // TODO: Add to sig Track
+}
+
+one sig Clipboard extends AContainer {}
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                             Predicates                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////
+
+pred Inv[t : Time] {
+    // Track has at least 2 samples
+	all track : _tracks.t | countAllSamples[track, t] > 1
+
+	// Window's indices are in boundaries of tracks samples sequence and has at least 2 visible samples
+	all track : _tracks.t |  track._window._start.t >= 0 && 
+								 track._window._end.t < countAllSamples[track, t] &&
+								track._window._end.t > track._window._start.t &&
+								(track._window._end.t).sub[track._window._start.t].add[1] = countAllSamples[track._window, t]
+
+	// All samples in window are from samples of track in the window's range
+	all track : _tracks.t | readAllSamples[track._window, t] = readSamples[track, track._window._start.t, track._window._end.t, t]
+
+	// Validate history 
+	Equiv[t, current[t]]
+}
 
 pred Equiv[t1 : Time, t2 : Time] {
 	all cont : _id.ID | readAllSamples[cont, t1] = readAllSamples[cont, t2]
@@ -38,9 +54,12 @@ pred Equiv[t1 : Time, t2 : Time] {
 	_end.t1 = _end.t2
 }
 
-pred ChangeHistory[t, t' : Time] {
-	History._history.t' = ((History._history.t).subseq[0, History._present.t]).add[t']  
-	History._present.t' = (History._present.t).add[1] 
+pred Init[t : Time] {
+	no _tracks.t
+	countAllSamples[Clipboard, t] = 0
+	History._history.t = 0 -> t
+	History._present.t = 0	
+	_action.t = InitAction
 }
 
 pred Import[t, t' : Time, track : Track] {
@@ -186,6 +205,13 @@ pred ZoomOut[t , t' : Time, track : Track, newStart, newEnd : Int] {
 	ChangeHistory[t, t']
 }
 
+pred Preserve[t, t' : Time] {
+	Equiv[t, t']
+	_history.t' = _history.t
+	_present.t' = _present.t
+	_action.t' = PreserveAction
+}
+
 pred Undo[t, t' : Time] {
 	// Precondition
 	History._present.t > 0
@@ -212,44 +238,6 @@ pred Redo[t, t' : Time] {
 	_action.t' = RedoAction
 }
 
-// Represents a state preservation betweent to times
-pred Skip[t, t' : Time] {
-	Equiv[t, t']
-	_history.t' = _history.t
-	_present.t' = _present.t
-	_action.t' = SkipAction
-}
-
-
-////////////////////////////////////////////////////////////////////////////////////////////
-//                                         Invariant Predicates                                     //
-////////////////////////////////////////////////////////////////////////////////////////////
-
-pred Init[t : Time] {
-	no _tracks.t
-	countAllSamples[Clipboard, t] = 0
-	History._history.t = 0 -> t
-	History._present.t = 0	
-	_action.t = InitAction
-}
-
-pred Inv[t : Time] {
-    // Track has at least 2 samples
-	all track : _tracks.t | countAllSamples[track, t] > 1
-
-	// Window's indices are in boundaries of tracks samples sequence and has at least 2 visible samples
-	all track : _tracks.t |  track._window._start.t >= 0 && 
-								 track._window._end.t < countAllSamples[track, t] &&
-								track._window._end.t > track._window._start.t &&
-								(track._window._end.t).sub[track._window._start.t].add[1] = countAllSamples[track._window, t]
-
-	// All samples in window are from samples of track in the window's range
-	all track : _tracks.t | readAllSamples[track._window, t] = readSamples[track, track._window._start.t, track._window._end.t, t]
-
-	// Validate history 
-	Equiv[t, current[t]]
-}
-
 pred SystemOperation[t, t' : Time] {
 		some track : Track, i, j : Int |
 			Import[t, t', track]
@@ -261,45 +249,15 @@ pred SystemOperation[t, t' : Time] {
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
-//                                                Functions                                               //
-////////////////////////////////////////////////////////////////////////////////////////////
-
-fun readAllSamples[cont : SamplesContainer, t : Time] : seq Sample {
-	cont._samples.t
-}
-
-fun readSamples[cont : SamplesContainer, from, to : Int, t : Time] : seq Sample {
-	subseq[cont._samples.t, from, to]
-}
-
-fun lastContSampleIdx[cont : SamplesContainer, t : Time] : Int {
-	countAllSamples[cont, t].sub[1]
-}
-
-fun countAllSamples[cont : SamplesContainer, t : Time] : Int {
-	#readAllSamples[cont, t]
-}
-
-fun countSamples[cont : SamplesContainer, from, to : Int, t : Time] : Int {
-	#readSamples[cont, from, to, t]
-}
-
-
-////////////////////////////////////////////////////////////////////////////////////////////
 //                                                   Facts                                                   //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 fact {
-	_window in Track one -> Window // different tracks have different windows
-	_id in SamplesContainer lone -> ID // id is unique identifier of SamplesContainer.
-}
-
-fact {
-	Init[first]
+	this/Init[first]
 	all t, t' : Time | t -> t' in next => 
 		(SystemOperation[t, t'] and ChangeHistory[t, t']) 
-		or Undo[t, t'] 
-		or Redo[t, t']
+		or this/Undo[t, t'] 
+		or this/Redo[t, t']
 }
 
 

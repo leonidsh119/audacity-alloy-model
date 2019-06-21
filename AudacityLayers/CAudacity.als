@@ -1,41 +1,55 @@
 module ConcreteAudacity
 
-open Common
 open Time
 open History
-
-let MAX_BLOCK_SIZE = 4
+open BFContainer
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                             Signatures                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-sig BlockFile {
-	_samples : seq Sample
-} { #_samples <= MAX_BLOCK_SIZE }
-
-abstract sig BlockFileContainer {
-	_id : ID,
-	_blocks : (seq BlockFile) -> Time
-}
-
-sig Track extends BlockFileContainer {
-	_tracks : set Time,
-	_window : Window
-}
-
-sig Window extends BlockFileContainer {
+sig Window extends BFContainer {
 	_start : Int -> Time,
 	_end : Int -> Time
 }
 
-one sig Clipboard extends BlockFileContainer {}
+sig Track extends BFContainer {
+	_tracks : set Time,
+	_window : Window
+}
+
+fact {
+	_window in Track one -> Window // TODO: Add to sig Track
+}
+
+one sig Clipboard extends BFContainer {}
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                             Predicates                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////
+
+pred Inv[t : Time] {
+    // Track has at least 2 samples
+	all track : _tracks.t | countAllSamples[track, t] > 1
+
+	// Window's indices are in boundaries of tracks samples sequence and has at least 2 visible samples
+	all track : _tracks.t |  track._window._start.t >= 0 && 
+								 track._window._end.t < countAllSamples[track, t] &&
+								track._window._end.t > track._window._start.t &&
+								(track._window._end.t).sub[track._window._start.t].add[1] = countAllSamples[track._window, t]
+
+	// All samples in window are from samples of track in the window's range
+	all track : _tracks.t | readAllSamples[track._window, t] = readSamples[track, track._window._start.t, track._window._end.t, t]
+}
+
+pred Init[t : Time] {
+	no _tracks.t
+	countAllSamples[Clipboard, t] = 0
+	no Clipboard._blocks.t
+	_action.t = InitAction
+}
 
 pred Import[t, t' : Time, track : Track] {
 	// Concrete Precondition
@@ -149,7 +163,7 @@ pred Paste[t, t' : Time, track : Track, into : Int] {
 	_action.t' = PasteAction
 }
 
-pred Split[cont : BlockFileContainer, blockIdx : Int, head, tail : BlockFile, t, t' : Time] {
+pred Split[cont : BFContainer, blockIdx : Int, head, tail : BlockFile, t, t' : Time] {
 	// Precondition
 	countAllBlocks[cont, t] > 1
 	blockIdx >= 0
@@ -161,7 +175,7 @@ pred Split[cont : BlockFileContainer, blockIdx : Int, head, tail : BlockFile, t,
 		block._samples = append[head._samples, tail._samples]
 
 		// Preserved
-		all bfc : BlockFileContainer | readAllSamples[bfc, t'] = readAllSamples[bfc, t]
+		all bfc : BFContainer | readAllSamples[bfc, t'] = readAllSamples[bfc, t]
 		_tracks.t' = _tracks.t
 
 		// Updated
@@ -170,7 +184,7 @@ pred Split[cont : BlockFileContainer, blockIdx : Int, head, tail : BlockFile, t,
 	_action.t = SplitAction
 }
 
-pred Insert[cont : BlockFileContainer, blockIdx : Int, emptyBlock : BlockFile, t, t' : Time] {
+pred Insert[cont : BFContainer, blockIdx : Int, emptyBlock : BlockFile, t, t' : Time] {
 	// Precondition
 	countAllBlocks[cont, t] > 1
 	blockIdx >= 0
@@ -178,7 +192,7 @@ pred Insert[cont : BlockFileContainer, blockIdx : Int, emptyBlock : BlockFile, t
 	#(emptyBlock._samples) = 0
 
 	// Preserved
-	all bfc : BlockFileContainer | readAllSamples[bfc, t'] = readAllSamples[bfc, t]
+	all bfc : BFContainer | readAllSamples[bfc, t'] = readAllSamples[bfc, t]
 	_tracks.t' = _tracks.t
 
 	// Updated
@@ -186,7 +200,7 @@ pred Insert[cont : BlockFileContainer, blockIdx : Int, emptyBlock : BlockFile, t
 	_action.t = InsertAction
 }
 
-pred Delete[cont : BlockFileContainer, blockIdx : Int, t, t' : Time] {
+pred Delete[cont : BFContainer, blockIdx : Int, t, t' : Time] {
 	// Precondition
 	countAllBlocks[cont, t] > 1
 	blockIdx >= 0
@@ -194,7 +208,7 @@ pred Delete[cont : BlockFileContainer, blockIdx : Int, t, t' : Time] {
 	#(blockForBlockIndex[cont, blockIdx, t]._samples) = 0
 
 	// Preserved
-	all bfc : BlockFileContainer | readAllSamples[bfc, t'] = readAllSamples[bfc, t]
+	all bfc : BFContainer | readAllSamples[bfc, t'] = readAllSamples[bfc, t]
 	_tracks.t' = _tracks.t
 
 	// Updated
@@ -202,123 +216,10 @@ pred Delete[cont : BlockFileContainer, blockIdx : Int, t, t' : Time] {
 	_action.t = DeleteAction
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////
-//                                         Invariant Predicates                                     //
-////////////////////////////////////////////////////////////////////////////////////////////
-
-pred Init[t : Time] {
-	no _tracks.t
-	countAllSamples[Clipboard, t] = 0
-	no Clipboard._blocks.t
-	_action.t = InitAction
-}
-
-pred Inv[t : Time] {
-    // Track has at least 2 samples
-	all track : _tracks.t | countAllSamples[track, t] > 1
-
-	// Window's indices are in boundaries of tracks samples sequence and has at least 2 visible samples
-	all track : _tracks.t |  track._window._start.t >= 0 && 
-								 track._window._end.t < countAllSamples[track, t] &&
-								track._window._end.t > track._window._start.t &&
-								(track._window._end.t).sub[track._window._start.t].add[1] = countAllSamples[track._window, t]
-
-	// All samples in window are from samples of track in the window's range
-	all track : _tracks.t | readAllSamples[track._window, t] = readSamples[track, track._window._start.t, track._window._end.t, t]
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////
-//                                                Functions                                               //
-////////////////////////////////////////////////////////////////////////////////////////////
-
-fun lastBlockIndex[cont : BlockFileContainer, t : Time] : Int {
-	countAllBlocks[cont, t].sub[1]
-}
-
-fun countBlocks[cont : BlockFileContainer, from, to : Int, t : Time] : Int {
-	#readBlocks[cont, from, to, t]
-}
-
-fun readBlocks[cont : BlockFileContainer, from, to : Int, t : Time] : seq BlockFile {
-	subseq[readAllBlocks[cont, t], from, to]
-}
-
-fun countAllBlocks[cont : BlockFileContainer, t : Time] : Int {
-	#readAllBlocks[cont, t]
-}
-
-fun readAllBlocks[cont : BlockFileContainer, t : Time] : seq BlockFile {
-	cont._blocks.t
-}
-
-fun lastContSampleIdx[cont : BlockFileContainer, t : Time] : Int {
-	countAllSamples[cont, t].sub[1]
-}
-
-fun countAllSamples[cont : BlockFileContainer, t : Time] : Int {
-	#readAllSamples[cont, t]
-}
-
-fun readAllSamples[cont : BlockFileContainer, t : Time] : seq Sample {
-	let blocksCount = #(cont._blocks.t), lastSampleIndex = prec[cont, blocksCount, t] |
-		readSamples[cont, 0, lastSampleIndex, t]
-}
-
-fun countSamples[cont : BlockFileContainer, from, to : Int, t : Time] : Int {
-	#readSamples[cont, from, to, t]
-}
-
-// NOTE: This method is the refinement of AbstractAudacityLayers model
-fun readSamples[cont : BlockFileContainer, from, to : Int, t : Time] : seq Sample {
-	// add/sub are needd to align indices from [from, to] range into zero-starting range
-	{ i : range[0, to.sub[from].add[1]], sample : readSample[cont, i.add[from], t] }
-}
-
-// For the given sample index in the entire track provides the block index the sample belongs to
-fun readSample[cont : BlockFileContainer, sampleIdx : Int, t : Time] : Sample {
-	blockForSampleIndex[cont, sampleIdx, t]._samples[sampleIndexInBlockForSampleIndex[cont, sampleIdx, t]]
-}
-
-// For the given sample index in the entire track provides the block the sample belongs to
-fun sampleIndexInBlockForSampleIndex[cont : BlockFileContainer, sampleIdx : Int, t : Time] : Int {
-	sampleIdx.sub[prec[cont, blockIndexForSampleIndex[cont, sampleIdx, t], t]]
-}
-
-// For the given sample index in the entire track provides the block the sample belongs to
-fun blockForSampleIndex[cont : BlockFileContainer, sampleIdx : Int, t : Time] : BlockFile {
-	let blockIdx = blockIndexForSampleIndex[cont, sampleIdx, t] |
-		blockForBlockIndex[cont, blockIdx, t]
-}
-
-fun blockForBlockIndex[cont : BlockFileContainer, blockIdx : Int, t : Time] : BlockFile {
-		(cont._blocks.t)[blockIdx]
-}
-
-// For the given sample index in the entire track provides the block index the sample belongs to
-fun blockIndexForSampleIndex[cont : BlockFileContainer, sampleIdx : Int, t : Time] : Int {
-	// (cont._blocks.t).BlockFile - the indices list of the blocks in sequence
-	max[ { j : (cont._blocks.t).BlockFile | prec[cont, j, t] <= sampleIdx } ] // Calculates the highest index of blocks where the sample can appear 
-}
-
-// Count the number of samples in block subsequence from start upto blockIdx (not including).
-// This is actually the index of the first sample in the block j
-fun prec[cont : BlockFileContainer, blockIdx : Int, t : Time] : Int {
-	sum k : range[0, blockIdx] | #((cont._blocks.t)[k]._samples)
-}
-
-// Creates a list of integers in range [from, to)
-fun range[from, upto : Int] : set Int {
-	{ n : Int | from <= n && n < upto } // This is the technique to create an iteration: create a list of integers representing the interation indices
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                                   Facts                                                   //
 ////////////////////////////////////////////////////////////////////////////////////////////
-
-fact {
-	_window in Track one -> Window // different tracks have different windows
-	_id in BlockFileContainer lone -> ID // id is unique identifier of BlockFileContainer.
-}
 
 fact {
 	Init[first]

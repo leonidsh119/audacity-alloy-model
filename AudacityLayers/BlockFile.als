@@ -1,10 +1,14 @@
-module Common
+module BlockFile
+
+open Sample
+
+let MAX_BLOCK_SIZE = 4
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                             Signatures                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-sig Sample {}
-
-sig ID {}
+sig BlockFile {
+	_samples : seq Sample
+} { #_samples <= MAX_BLOCK_SIZE }
