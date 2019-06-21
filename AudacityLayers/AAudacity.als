@@ -31,14 +31,15 @@ one sig Clipboard extends AContainer {}
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 pred Inv[t : Time] {
-    // Track has at least 2 samples
+	// Track has at least 2 samples
 	all track : _tracks.t | countAllSamples[track, t] > 1
 
 	// Window's indices are in boundaries of tracks samples sequence and has at least 2 visible samples
-	all track : _tracks.t |  track._window._start.t >= 0 && 
-								 track._window._end.t < countAllSamples[track, t] &&
-								track._window._end.t > track._window._start.t &&
-								(track._window._end.t).sub[track._window._start.t].add[1] = countAllSamples[track._window, t]
+	all track : _tracks.t |  
+		track._window._start.t >= 0 && 
+		track._window._end.t < countAllSamples[track, t] &&
+		track._window._end.t > track._window._start.t &&
+		(track._window._end.t).sub[track._window._start.t].add[1] = countAllSamples[track._window, t]
 
 	// All samples in window are from samples of track in the window's range
 	all track : _tracks.t | readAllSamples[track._window, t] = readSamples[track, track._window._start.t, track._window._end.t, t]
@@ -48,7 +49,7 @@ pred Inv[t : Time] {
 }
 
 pred Equiv[t1 : Time, t2 : Time] {
-	all cont : _id.ID | readAllSamples[cont, t1] = readAllSamples[cont, t2]
+	all cont : Track + Window + Clipboard | Preserve[cont, t1, t2]
 	_tracks.t1 = _tracks.t2
 	_start.t1 = _start.t2
 	_end.t1 = _end.t2
@@ -56,10 +57,9 @@ pred Equiv[t1 : Time, t2 : Time] {
 
 pred Init[t : Time] {
 	no _tracks.t
-	countAllSamples[Clipboard, t] = 0
-	History._history.t = 0 -> t
-	History._present.t = 0	
-	_action.t = InitAction
+	Empty[Clipboard, t]
+	History/Init[t]
+	SetAction[InitAction, t]
 }
 
 pred Import[t, t' : Time, track : Track] {
@@ -75,7 +75,7 @@ pred Import[t, t' : Time, track : Track] {
 	_start.t' = _start.t ++ track._window -> 0 // Maximum zoom out
 	_end.t' = _end.t ++ track._window -> lastContSampleIdx[track, t] // Maximum zoom out
 	readAllSamples[track._window, t'] = readAllSamples[track, t] // Maximum zoom out
-	_action.t' = ImportAction
+	SetAction[ImportAction, t']
 	ChangeHistory[t, t']
 }
 
@@ -114,7 +114,7 @@ pred CutNoMove[t, t' : Time, track : Track, from, to : Int] {
 	_end.t' = _end.t // use the same window size and location in track
 
 	// Updated
-	_action.t' = CutNoMoveAction
+	SetAction[CutNoMoveAction, t']
 }
 
 pred CutMove[t, t' : Time, track : Track, from, to : Int] {
@@ -125,7 +125,7 @@ pred CutMove[t, t' : Time, track : Track, from, to : Int] {
 	// Updated
 	_start.t' = _start.t ++ track._window -> track._window._end.t'.sub[track._window._end.t.sub[track._window._start.t]] // moved visible window size is preserved
 	_end.t' = _end.t ++ track._window -> countAllSamples[track, t'].sub[1] // visible vindow is moved to the end of the track
-	_action.t' = CutMoveAction
+	SetAction[CutMoveAction, t']
 }
 
 pred CutZoomIn[t, t' : Time, track : Track, from, to : Int] {
@@ -135,7 +135,7 @@ pred CutZoomIn[t, t' : Time, track : Track, from, to : Int] {
 	// Updated
 	_start.t' = _start.t ++ track._window -> 0 // the visible window shrinking to display all the remaining samples
 	_end.t' = _end.t ++ track._window -> countAllSamples[track, t'].sub[1] // the visible window shrinking to display all the remaining samples
-	_action.t' = CutZoomInAction
+	SetAction[CutZoomInAction, t']
 }
 
 pred Paste[t, t' : Time, track : Track, into : Int] {
@@ -156,7 +156,7 @@ pred Paste[t, t' : Time, track : Track, into : Int] {
 	readSamples[track, into, into.add[countAllSamples[Clipboard, t]].sub[1], t'] = readAllSamples[Clipboard, t]
 	readSamples[track, into.add[countAllSamples[Clipboard, t]], lastContSampleIdx[track, t'], t'] = readSamples[track, into, lastContSampleIdx[track, t], t]
 	readAllSamples[track._window, t'] = readSamples[track, track._window._start.t, track._window._end.t, t'] // Refresh displayed samples according to the remaining window start and end
-	_action.t' = PasteAction
+	SetAction[PasteAction, t']
 	ChangeHistory[t, t']
 }
 
@@ -178,7 +178,7 @@ pred ZoomIn[t , t' : Time, track : Track, newStart, newEnd : Int] {
 	_start.t' = _start.t ++ track._window -> newStart
 	_end.t' = _end.t ++ track._window -> newEnd
 	readAllSamples[track._window, t'] = readSamples[track, newStart, newEnd, t]
-	_action.t' = ZoomInAction
+	SetAction[ZoomInAction, t']
 	ChangeHistory[t, t']
 }
 
@@ -201,50 +201,26 @@ pred ZoomOut[t , t' : Time, track : Track, newStart, newEnd : Int] {
 	_start.t' = _start.t ++ track._window -> newStart
 	_end.t' = _end.t ++ track._window -> newEnd
 	readAllSamples[track._window, t'] = readSamples[track, newStart, newEnd, t]
-	_action.t' = ZoomOutAction
+	SetAction[ZoomOutAction, t']
 	ChangeHistory[t, t']
 }
 
 pred Preserve[t, t' : Time] {
 	Equiv[t, t']
-	_history.t' = _history.t
-	_present.t' = _present.t
-	_action.t' = PreserveAction
+	History/Preserve[t, t']
+	SetAction[PreserveAction, t']
 }
 
 pred Undo[t, t' : Time] {
-	// Precondition
-	History._present.t > 0
-
-	// Preserved
-	History._history.t' = History._history.t
-
-	// Updated
-	History._present.t' = (History._present.t).sub[1]
+	History/Undo[t, t']
 	Equiv[t', current[t']]
-	_action.t' = UndoAction
+	SetAction[UndoAction, t']
 }
 
 pred Redo[t, t' : Time] {
-	// Precondition
-	History._present.t < (#(History._history.t)).sub[1]
-
-	// Preserved
-	History._history.t' = History._history.t
-
-	// Updated
-	History._present.t' = (History._present.t).add[1]
+	History/Redo[t, t']
 	Equiv[t', current[t']]
-	_action.t' = RedoAction
-}
-
-pred SystemOperation[t, t' : Time] {
-		some track : Track, i, j : Int |
-			Import[t, t', track]
-			or Cut[t, t', track, i, j]
-			or Paste[t, t', track, i]
-			or ZoomIn[t, t', track, i, j]
-			or ZoomOut[t, t', track, i, j]
+	SetAction[RedoAction, t']
 }
 
 
@@ -255,9 +231,15 @@ pred SystemOperation[t, t' : Time] {
 fact {
 	this/Init[first]
 	all t, t' : Time | t -> t' in next => 
-		(SystemOperation[t, t'] and ChangeHistory[t, t']) 
+		some track : Track, i, j : Int |
+			Import[t, t', track]
+			or Cut[t, t', track, i, j]
+			or Paste[t, t', track, i]
+			or ZoomIn[t, t', track, i, j]
+			or ZoomOut[t, t', track, i, j]
 		or this/Undo[t, t'] 
 		or this/Redo[t, t']
+		or this/Preserve[t, t']
 }
 
 

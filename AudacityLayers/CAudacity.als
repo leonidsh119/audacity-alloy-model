@@ -1,4 +1,4 @@
-module ConcreteAudacity
+module CAudacity
 
 open Time
 open History
@@ -31,24 +31,35 @@ one sig Clipboard extends BFContainer {}
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 pred Inv[t : Time] {
-    // Track has at least 2 samples
+	// Track has at least 2 samples
 	all track : _tracks.t | countAllSamples[track, t] > 1
 
 	// Window's indices are in boundaries of tracks samples sequence and has at least 2 visible samples
-	all track : _tracks.t |  track._window._start.t >= 0 && 
-								 track._window._end.t < countAllSamples[track, t] &&
-								track._window._end.t > track._window._start.t &&
-								(track._window._end.t).sub[track._window._start.t].add[1] = countAllSamples[track._window, t]
+	all track : _tracks.t |  
+		track._window._start.t >= 0 && 
+		track._window._end.t < countAllSamples[track, t] &&
+		track._window._end.t > track._window._start.t &&
+		(track._window._end.t).sub[track._window._start.t].add[1] = countAllSamples[track._window, t]
 
 	// All samples in window are from samples of track in the window's range
 	all track : _tracks.t | readAllSamples[track._window, t] = readSamples[track, track._window._start.t, track._window._end.t, t]
+
+	// Validate history 
+	Equiv[t, current[t]]
+}
+
+pred Equiv[t1 : Time, t2 : Time] {
+	all cont : Track + Window + Clipboard | Preserve[cont, t1, t2]
+	_tracks.t1 = _tracks.t2
+	_start.t1 = _start.t2
+	_end.t1 = _end.t2
 }
 
 pred Init[t : Time] {
 	no _tracks.t
-	countAllSamples[Clipboard, t] = 0
-	no Clipboard._blocks.t
-	_action.t = InitAction
+	Empty[Clipboard, t]
+	History/Init[t]
+	SetAction[InitAction, t]
 }
 
 pred Import[t, t' : Time, track : Track] {
@@ -67,7 +78,8 @@ pred Import[t, t' : Time, track : Track] {
 	_start.t' = _start.t ++ track._window -> 0 // Maximum zoom out
 	_end.t' = _end.t ++ track._window -> lastContSampleIdx[track, t] // Maximum zoom out
 	readAllSamples[track._window, t'] = readAllSamples[track, t] // Maximum zoom out
-	_action.t' = ImportAction
+	SetAction[ImportAction, t']
+	ChangeHistory[t, t']
 }
 
 pred Cut[t, t' : Time, track : Track, from, to : Int] {
@@ -101,6 +113,7 @@ pred Cut[t, t' : Time, track : Track, from, to : Int] {
 	readAllSamples[Clipboard, t'] = readSamples[track, from, to, t]
 	readSamples[track, from, lastContSampleIdx[track, t'], t'] = readSamples[track, to.add[1], lastContSampleIdx[track, t], t]
 	readAllSamples[track._window, t'] = readSamples[track, track._window._start.t', track._window._end.t', t'] // Refresh displayed samples according to the remaining window start and end, but with the new track samples sequence
+	ChangeHistory[t, t']
 }
 
 pred CutNoMove[t, t' : Time, track : Track, from, to : Int] {
@@ -112,7 +125,7 @@ pred CutNoMove[t, t' : Time, track : Track, from, to : Int] {
 	_end.t' = _end.t // use the same window size and location in track
 
 	// Updated
-	_action.t' = CutNoMoveAction
+	SetAction[CutNoMoveAction, t']
 }
 
 pred CutMove[t, t' : Time, track : Track, from, to : Int] {
@@ -123,7 +136,7 @@ pred CutMove[t, t' : Time, track : Track, from, to : Int] {
 	// Updated
 	_start.t' = _start.t ++ track._window -> track._window._end.t'.sub[track._window._end.t.sub[track._window._start.t]] // moved visible window size is preserved
 	_end.t' = _end.t ++ track._window -> countAllSamples[track, t'].sub[1] // visible vindow is moved to the end of the track
-	_action.t' = CutMoveAction
+	SetAction[CutMoveAction, t']
 }
 
 pred CutZoomIn[t, t' : Time, track : Track, from, to : Int] {
@@ -133,7 +146,7 @@ pred CutZoomIn[t, t' : Time, track : Track, from, to : Int] {
 	// Updated
 	_start.t' = _start.t ++ track._window -> 0 // the visible window shrinking to display all the remaining samples
 	_end.t' = _end.t ++ track._window -> countAllSamples[track, t'].sub[1] // the visible window shrinking to display all the remaining samples
-	_action.t' = CutZoomInAction
+	SetAction[CutZoomInAction, t']
 }
 
 pred Paste[t, t' : Time, track : Track, into : Int] {
@@ -160,7 +173,53 @@ pred Paste[t, t' : Time, track : Track, into : Int] {
 	readSamples[track, into, into.add[countAllSamples[Clipboard, t]].sub[1], t'] = readAllSamples[Clipboard, t]
 	readSamples[track, into.add[countAllSamples[Clipboard, t]], lastContSampleIdx[track, t'], t'] = readSamples[track, into, lastContSampleIdx[track, t], t]
 	readAllSamples[track._window, t'] = readSamples[track, track._window._start.t, track._window._end.t, t'] // Refresh displayed samples according to the remaining window start and end
-	_action.t' = PasteAction
+	SetAction[PasteAction, t']
+	ChangeHistory[t, t']
+}
+
+pred ZoomIn[t , t' : Time, track : Track, newStart, newEnd : Int] {
+	// Precondition
+	track in _tracks.t // the track belongs to the project's tracks list
+	countAllSamples[track._window, t] > 2 // the window has space to shrink
+	newEnd.sub[newStart] < (track._window._end.t).sub[track._window._start.t] // new window is smaller than the old one
+	newStart >= 0 // new window boundaries are inside the track's samples (start)
+	newStart >= track._window._start.t // new window boundaries are inside old one's (start)
+	newEnd <= track._window._end.t // new window boundaries are inside old one's (end)
+	newEnd.sub[newStart] > 1 // new window will have the minimum required size
+	
+	// Preserved
+	_tracks.t' = _tracks.t
+	all cont : _id.ID - track._window | readAllSamples[cont, t'] = readAllSamples[cont, t]
+
+	// Updated
+	_start.t' = _start.t ++ track._window -> newStart
+	_end.t' = _end.t ++ track._window -> newEnd
+	readAllSamples[track._window, t'] = readSamples[track, newStart, newEnd, t]
+	SetAction[ZoomInAction, t']
+	ChangeHistory[t, t']
+}
+
+pred ZoomOut[t , t' : Time, track : Track, newStart, newEnd : Int] {
+	// Precondition
+	track in _tracks.t // the track belongs to the project's tracks list
+	countAllSamples[track._window, t].sub[countAllSamples[track, t]]  > 0  // the window can grow
+	newEnd.sub[newStart] > (track._window._end.t).sub[track._window._start.t] // new window is larger than the old one
+	newStart <= track._window._start.t // new window boundaries are outside old one's (start)
+	newEnd >= track._window._end.t // new window boundaries are outside old one's (end)
+	newStart >= 0 // new window boundaries are inside the track's samples (start)
+	newEnd < countAllSamples[track, t] // new window boundaries are inside the track's samples (end)
+	newStart < newEnd // new window is a positive range
+
+	// Preserved
+	_tracks.t' = _tracks.t
+	all cont : _id.ID - track._window | readAllSamples[cont, t'] = readAllSamples[cont, t]
+
+	// Updated
+	_start.t' = _start.t ++ track._window -> newStart
+	_end.t' = _end.t ++ track._window -> newEnd
+	readAllSamples[track._window, t'] = readSamples[track, newStart, newEnd, t]
+	SetAction[ZoomOutAction, t']
+	ChangeHistory[t, t']
 }
 
 pred Split[cont : BFContainer, blockIdx : Int, head, tail : BlockFile, t, t' : Time] {
@@ -216,18 +275,41 @@ pred Delete[cont : BFContainer, blockIdx : Int, t, t' : Time] {
 	_action.t = DeleteAction
 }
 
+pred Preserve[t, t' : Time] {
+	Equiv[t, t']
+	History/Preserve[t, t']
+	SetAction[PreserveAction, t']
+}
+
+pred Undo[t, t' : Time] {
+	History/Undo[t, t']
+	Equiv[t', current[t']]
+	SetAction[UndoAction, t']
+}
+
+pred Redo[t, t' : Time] {
+	History/Redo[t, t']
+	Equiv[t', current[t']]
+	SetAction[RedoAction, t']
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                                   Facts                                                   //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 fact {
-	Init[first]
+	this/Init[first]
 	all t, t' : Time | t -> t' in next => 
 		some track : Track, i, j : Int |
 			Import[t, t', track]
 			or Cut[t, t', track, i, j]
 			or Paste[t, t', track, i]
+			or ZoomIn[t, t', track, i, j]
+			or ZoomOut[t, t', track, i, j]
+		or this/Undo[t, t'] 
+		or this/Redo[t, t']
+		or this/Preserve[t, t']
 }
 
 
