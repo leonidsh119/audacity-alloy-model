@@ -59,9 +59,6 @@ pred Init[t : Time] {
 }
 
 pred Import[t, t' : Time, track : Track] {
-	// Concrete Precondition
-	all block : BlockFile | block in Int.(track._blocks.t) => some block._samples
-
 	// Precondition
 	track !in _tracks.t // this is a new track that doesn't belongs to the prject's tracks list
 	Validate[track, t]
@@ -77,6 +74,39 @@ pred Import[t, t' : Time, track : Track] {
 	readAllSamples[track._window, t'] = readAllSamples[track, t] // Maximum zoom out
 	History/Advance[t, t']
 	SetAction[ImportAction, t']
+}
+
+pred CutNoMove[t, t' : Time, track : Track, from, to : Int] {
+	// Precondition
+	to.sub[from].add[1] <= countSamples[track, track._window._end.t, countAllSamples[track, t].sub[1], t].sub[1] // number for cut samples is SMALLER than number of samples from the left of the visible winfow
+
+	// Preserved
+	_start.t' = _start.t // use the same window size and location in track
+	_end.t' = _end.t // use the same window size and location in track
+
+	// Updated
+	SetAction[CutNoMoveAction, t']
+}
+
+pred CutMove[t, t' : Time, track : Track, from, to : Int] {
+	// Precondition
+	to.sub[from].add[1] > countSamples[track, track._window._end.t, countAllSamples[track, t].sub[1], t].sub[1] // number for cut samples is LARGER than number of samples from the left of the visible winfow, but...
+	to.sub[from].add[1] <= countSamples[track, track._window._end.t, countAllSamples[track, t].sub[1], t].sub[1].add[countSamples[track, 0, track._window._start.t, t]].sub[1] // number for cut samples is SMALLER than number of sequences from the left AND from the right of the visible winfow, but...
+
+	// Updated
+	_start.t' = _start.t ++ track._window -> track._window._end.t'.sub[track._window._end.t.sub[track._window._start.t]] // moved visible window size is preserved
+	_end.t' = _end.t ++ track._window -> countAllSamples[track, t'].sub[1] // visible vindow is moved to the end of the track
+	SetAction[CutMoveAction, t']
+}
+
+pred CutZoomIn[t, t' : Time, track : Track, from, to : Int] {
+	// Precondition
+	to.sub[from].add[1] > countSamples[track, track._window._end.t, countAllSamples[track, t], t].sub[1].add[countSamples[track, 0, track._window._start.t, t]].sub[1] // number for cut samples is LARGER than number of sequences from the left AND from the right of the visible winfow
+
+	// Updated
+	_start.t' = _start.t ++ track._window -> 0 // the visible window shrinking to display all the remaining samples
+	_end.t' = _end.t ++ track._window -> countAllSamples[track, t'].sub[1] // the visible window shrinking to display all the remaining samples
+	SetAction[CutZoomInAction, t']
 }
 
 pred Cut[t, t' : Time, track : Track, from, to : Int] {
@@ -111,39 +141,6 @@ pred Cut[t, t' : Time, track : Track, from, to : Int] {
 	readSamples[track, from, lastContSampleIdx[track, t'], t'] = readSamples[track, to.add[1], lastContSampleIdx[track, t], t]
 	readAllSamples[track._window, t'] = readSamples[track, track._window._start.t', track._window._end.t', t'] // Refresh displayed samples according to the remaining window start and end, but with the new track samples sequence
 	History/Advance[t, t']
-}
-
-pred CutNoMove[t, t' : Time, track : Track, from, to : Int] {
-	// Precondition
-	to.sub[from].add[1] <= countSamples[track, track._window._end.t, countAllSamples[track, t].sub[1], t].sub[1] // number for cut samples is SMALLER than number of samples from the left of the visible winfow
-
-	// Preserved
-	_start.t' = _start.t // use the same window size and location in track
-	_end.t' = _end.t // use the same window size and location in track
-
-	// Updated
-	SetAction[CutNoMoveAction, t']
-}
-
-pred CutMove[t, t' : Time, track : Track, from, to : Int] {
-	// Precondition
-	to.sub[from].add[1] > countSamples[track, track._window._end.t, countAllSamples[track, t].sub[1], t].sub[1] // number for cut samples is LARGER than number of samples from the left of the visible winfow, but...
-	to.sub[from].add[1] <= countSamples[track, track._window._end.t, countAllSamples[track, t].sub[1], t].sub[1].add[countSamples[track, 0, track._window._start.t, t]].sub[1] // number for cut samples is SMALLER than number of sequences from the left AND from the right of the visible winfow, but...
-
-	// Updated
-	_start.t' = _start.t ++ track._window -> track._window._end.t'.sub[track._window._end.t.sub[track._window._start.t]] // moved visible window size is preserved
-	_end.t' = _end.t ++ track._window -> countAllSamples[track, t'].sub[1] // visible vindow is moved to the end of the track
-	SetAction[CutMoveAction, t']
-}
-
-pred CutZoomIn[t, t' : Time, track : Track, from, to : Int] {
-	// Precondition
-	to.sub[from].add[1] > countSamples[track, track._window._end.t, countAllSamples[track, t], t].sub[1].add[countSamples[track, 0, track._window._start.t, t]].sub[1] // number for cut samples is LARGER than number of sequences from the left AND from the right of the visible winfow
-
-	// Updated
-	_start.t' = _start.t ++ track._window -> 0 // the visible window shrinking to display all the remaining samples
-	_end.t' = _end.t ++ track._window -> countAllSamples[track, t'].sub[1] // the visible window shrinking to display all the remaining samples
-	SetAction[CutZoomInAction, t']
 }
 
 pred Paste[t, t' : Time, track : Track, into : Int] {
