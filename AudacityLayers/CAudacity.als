@@ -237,7 +237,7 @@ pred Split[cont : BFContainer, blockIdx : Int, head, tail : BlockFile, t, t' : T
 		// Updated
 		_blocks.t' = _blocks.t ++ cont -> insert[insert[cont._blocks.t, blockIdx, tail], blockIdx, head]
 	}
-	_action.t = SplitAction
+	SetAction[SplitAction, t']
 }
 
 pred Insert[cont : BFContainer, blockIdx : Int, emptyBlock : BlockFile, t, t' : Time] {
@@ -253,7 +253,7 @@ pred Insert[cont : BFContainer, blockIdx : Int, emptyBlock : BlockFile, t, t' : 
 
 	// Updated
 	_blocks.t' = _blocks.t ++ cont -> insert[cont._blocks.t, blockIdx, emptyBlock]
-	_action.t = InsertAction
+	SetAction[InsertAction, t']
 }
 
 pred Delete[cont : BFContainer, blockIdx : Int, t, t' : Time] {
@@ -269,7 +269,7 @@ pred Delete[cont : BFContainer, blockIdx : Int, t, t' : Time] {
 
 	// Updated
 	_blocks.t' = _blocks.t ++ cont -> delete[cont._blocks.t, blockIdx]
-	_action.t = DeleteAction
+	SetAction[DeleteAction, t']
 }
 
 pred Preserve[t, t' : Time] {

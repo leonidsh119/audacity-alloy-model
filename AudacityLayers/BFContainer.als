@@ -24,7 +24,7 @@ pred Empty[cont : BFContainer, t : Time] {
 
 pred Validate[cont : BFContainer, t : Time] {
 	some cont._blocks.t // Has some blocks
-	all block : cont._blocks.t | #(block._samples) > 0 // No Empty blocks
+	//all block : cont._blocks.t | #(block._samples) > 0 // No Empty blocks
 	countAllSamples[cont, t] > 1 // Not empty. Asumming at least 2 samples for being able to define a window
 }
 
