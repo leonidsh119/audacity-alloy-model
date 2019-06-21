@@ -1,13 +1,16 @@
 module CAudacity
 
 open Time
-open History
 open BFContainer
+open History
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                             Signatures                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////
+
+one sig Clipboard extends BFContainer {
+}
 
 sig Window extends BFContainer {
 	_start : Int -> Time,
@@ -23,34 +26,27 @@ fact {
 	_window in Track one -> Window // TODO: Add to sig Track
 }
 
-one sig Clipboard extends BFContainer {}
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                             Predicates                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 pred Inv[t : Time] {
-	// Track has at least 2 samples
-	all track : _tracks.t | countAllSamples[track, t] > 1
+	all track : _tracks.t | Validate[track, t]
 
-	// Window's indices are in boundaries of tracks samples sequence and has at least 2 visible samples
 	all track : _tracks.t |  
 		track._window._start.t >= 0 && 
 		track._window._end.t < countAllSamples[track, t] &&
 		track._window._end.t > track._window._start.t &&
-		(track._window._end.t).sub[track._window._start.t].add[1] = countAllSamples[track._window, t]
+		(track._window._end.t).sub[track._window._start.t].add[1] = countAllSamples[track._window, t] &&
+		readAllSamples[track._window, t] = readSamples[track, track._window._start.t, track._window._end.t, t] // All samples in window are from samples of track in the window's range
 
-	// All samples in window are from samples of track in the window's range
-	all track : _tracks.t | readAllSamples[track._window, t] = readSamples[track, track._window._start.t, track._window._end.t, t]
-
-	// Validate history 
 	Equiv[t, current[t]]
 }
 
 pred Equiv[t1 : Time, t2 : Time] {
-	all cont : Track + Window + Clipboard | Preserve[cont, t1, t2]
 	_tracks.t1 = _tracks.t2
+	all cont : Track + Window + Clipboard | Preserve[cont, t1, t2]
 	_start.t1 = _start.t2
 	_end.t1 = _end.t2
 }
@@ -68,18 +64,19 @@ pred Import[t, t' : Time, track : Track] {
 
 	// Precondition
 	track !in _tracks.t // this is a new track that doesn't belongs to the prject's tracks list
-	countAllSamples[track, t] > 1 // the new track is not empty. Asumming at least 2 samples for being able to define a window
+	Validate[track, t]
 
 	// Preserved
-	all cont : _id.ID - track._window | readAllSamples[cont, t'] = readAllSamples[cont, t]
+	all cont : Track + Window + Clipboard | Preserve[cont, t, t']
+	all otherTrack : Track - track  | readAllSamples[otherTrack._window, t'] = readAllSamples[otherTrack._window, t]
 
 	// Updated
 	_tracks.t' = _tracks.t + track
 	_start.t' = _start.t ++ track._window -> 0 // Maximum zoom out
 	_end.t' = _end.t ++ track._window -> lastContSampleIdx[track, t] // Maximum zoom out
 	readAllSamples[track._window, t'] = readAllSamples[track, t] // Maximum zoom out
-	SetAction[ImportAction, t']
 	ChangeHistory[t, t']
+	SetAction[ImportAction, t']
 }
 
 pred Cut[t, t' : Time, track : Track, from, to : Int] {
