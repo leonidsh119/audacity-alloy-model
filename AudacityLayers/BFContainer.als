@@ -55,7 +55,7 @@ pred ExtractSamples[contSrc, contOut : BFContainer, from, to : Int, t, t' : Time
 pred InsertSamples[cont1, cont2 : BFContainer, into : Int, t, t' : Time] {
 	let firstEmptyBlockIndex = add[blockIndexForSampleIndex[cont1, sub[into, 1], t], 1],  lastEmptyBlockIndex = add[firstEmptyBlockIndex, countAllBlocks[cont2, t]] | {
 		// Precondition
-		all block : cont1._blocks | block.t' = block.t // The assumption is that all needed blocks are already prepared and in this method only filled up with samples
+//		all block : cont1._blocks | block.t' = block.t // The assumption is that all needed blocks are already prepared and in this method only filled up with samples
 		all i : range[firstEmptyBlockIndex, lastEmptyBlockIndex] | #(blockForBlockIndex[cont1, i, t]._samples) = 0
 		all i : range[0, countAllBlocks[cont1, t]] - range[firstEmptyBlockIndex, lastEmptyBlockIndex] | #(blockForBlockIndex[cont1, i, t]._samples) > 0
 
