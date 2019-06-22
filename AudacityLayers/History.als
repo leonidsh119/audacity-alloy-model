@@ -17,28 +17,28 @@ one sig History {
 //                                             Predicates                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-pred Init[t : Time] {
+pred InitHistory[t : Time] {
 	History._history.t = 0 -> t
 	History._present.t = 0
 }
 
-pred Advance[t, t' : Time] {
+pred AdvanceHistory[t, t' : Time] {
 	History._history.t' = ((History._history.t).subseq[0, History._present.t]).add[t']  
 	History._present.t' = (History._present.t).add[1] 
 }
 
-pred Preserve[t, t' : Time] {
+pred PreserveHistory[t, t' : Time] {
 	_history.t' = _history.t
 	_present.t' = _present.t
 }
 
-pred Undo[t, t' : Time] {
+pred UndoHistory[t, t' : Time] {
 	History._present.t > 0
 	History._history.t' = History._history.t
 	History._present.t' = (History._present.t).sub[1]
 }
 
-pred Redo[t, t' : Time] {
+pred RedoHistory[t, t' : Time] {
 	History._present.t < (#(History._history.t)).sub[1]
 	History._history.t' = History._history.t
 	History._present.t' = (History._present.t).add[1]
