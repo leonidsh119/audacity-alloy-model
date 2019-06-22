@@ -167,21 +167,20 @@ pred Paste[t, t' : Time, track : Track, into : Int] {
 pred ZoomIn[t , t' : Time, track : Track, newStart, newEnd : Int] {
 	// Precondition
 	track in _tracks.t // the track belongs to the project's tracks list
-	countAllSamples[track._window, t] > 2 // the window has space to shrink
-	newEnd.sub[newStart] < (track._window._end.t).sub[track._window._start.t] // new window is smaller than the old one
+	CanZoomIn[track._window, newStart, newEnd, t]
 	newStart >= 0 // new window boundaries are inside the track's samples (start)
-	newStart >= track._window._start.t // new window boundaries are inside old one's (start)
-	newEnd <= track._window._end.t // new window boundaries are inside old one's (end)
 	newEnd.sub[newStart] > 1 // new window will have the minimum required size
 	
 	// Preserved
 	_tracks.t' = _tracks.t
-	all cont : _id.ID - track._window | readAllSamples[cont, t'] = readAllSamples[cont, t]
+	PreserveContainer[Clipboard, t, t']
+	PreserveContainer[track, t, t']
+	all otherTrack : _tracks.t - track | 
+		PreserveContainer[otherTrack, t, t'] &&
+		PreserveWindow[otherTrack._window, t, t']
 
 	// Updated
-	_start.t' = _start.t ++ track._window -> newStart
-	_end.t' = _end.t ++ track._window -> newEnd
-	readAllSamples[track._window, t'] = readSamples[track, newStart, newEnd, t]
+	SetWindow[track._window, newStart, newEnd, readSamples[track, newStart, newEnd, t], t']
 	AdvanceHistory[t, t']
 	SetAction[ZoomInAction, t']
 }
@@ -189,22 +188,22 @@ pred ZoomIn[t , t' : Time, track : Track, newStart, newEnd : Int] {
 pred ZoomOut[t , t' : Time, track : Track, newStart, newEnd : Int] {
 	// Precondition
 	track in _tracks.t // the track belongs to the project's tracks list
-	countAllSamples[track._window, t].sub[countAllSamples[track, t]]  > 0  // the window can grow
-	newEnd.sub[newStart] > (track._window._end.t).sub[track._window._start.t] // new window is larger than the old one
-	newStart <= track._window._start.t // new window boundaries are outside old one's (start)
-	newEnd >= track._window._end.t // new window boundaries are outside old one's (end)
+	CanZoomOut[track._window, newStart, newEnd, t]
+	countAllSamples[track, t] > countAllSamples[track._window, t] // the window can grow
 	newStart >= 0 // new window boundaries are inside the track's samples (start)
 	newEnd < countAllSamples[track, t] // new window boundaries are inside the track's samples (end)
 	newStart < newEnd // new window is a positive range
 
 	// Preserved
 	_tracks.t' = _tracks.t
-	all cont : _id.ID - track._window | readAllSamples[cont, t'] = readAllSamples[cont, t]
+	PreserveContainer[Clipboard, t, t']
+	PreserveContainer[track, t, t']
+	all otherTrack : _tracks.t - track | 
+		PreserveContainer[otherTrack, t, t'] &&
+		PreserveWindow[otherTrack._window, t, t']
 
 	// Updated
-	_start.t' = _start.t ++ track._window -> newStart
-	_end.t' = _end.t ++ track._window -> newEnd
-	readAllSamples[track._window, t'] = readSamples[track, newStart, newEnd, t]
+	SetWindow[track._window, newStart, newEnd, readSamples[track, newStart, newEnd, t], t']
 	AdvanceHistory[t, t']
 	SetAction[ZoomInAction, t']
 }

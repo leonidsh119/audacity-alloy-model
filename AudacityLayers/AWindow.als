@@ -48,6 +48,19 @@ pred IsRangeDisplayed[window : Window, from, to : Int, t : Time] {
 	window._end.t >= to
 }
 
+pred CanZoomIn[window : Window, newStart, newEnd : Int, t : Time] {
+	countAllSamples[window, t] > 2 // the window has space to shrink
+	newEnd.sub[newStart] < (window._end.t).sub[window._start.t] // new window is smaller than the old one
+	newStart >= window._start.t // new window boundaries are inside old one's (start)
+	newEnd <= window._end.t // new window boundaries are inside old one's (end)
+}
+
+pred CanZoomOut[window : Window, newStart, newEnd : Int, t : Time] {
+	newEnd.sub[newStart] > (window._end.t).sub[window._start.t] // new window is larger than the old one
+	newStart <= window._start.t // new window boundaries are outside old one's (start)
+	newEnd >= window._end.t // new window boundaries are outside old one's (end)
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                                Functions                                               //
