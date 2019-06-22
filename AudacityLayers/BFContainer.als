@@ -17,18 +17,18 @@ abstract sig BFContainer extends Container {
 //                                             Predicates                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-pred Empty[cont : BFContainer, t : Time] {
+pred EmptyContainer[cont : BFContainer, t : Time] {
 	no cont._blocks.t
 	countAllSamples[cont, t] = 0
 }
 
-pred Validate[cont : BFContainer, t : Time] {
+pred ValidateContainer[cont : BFContainer, t : Time] {
 	some cont._blocks.t // Has some blocks
 	//all block : cont._blocks.t | #(block._samples) > 0 // No Empty blocks
 	countAllSamples[cont, t] > 1 // Not empty. Asumming at least 2 samples for being able to define a window
 }
 
-pred Preserve[cont : BFContainer, t, t' : Time] {
+pred PreserveContainer[cont : BFContainer, t, t' : Time] {
 	cont._blocks.t' = cont._blocks.t
 	//all block : cont._blocks | block.t._samples = block.t'._samples // TODO: Fix Skolmization Error
 	readAllSamples[cont, t] = readAllSamples[cont, t']

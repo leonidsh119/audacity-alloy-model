@@ -17,7 +17,7 @@ abstract sig AContainer extends Container {
 //                                             Predicates                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-pred Empty[cont : AContainer, t : Time] {
+pred EmptyContainer[cont : AContainer, t : Time] {
 	countAllSamples[cont, t] = 0
 }
 

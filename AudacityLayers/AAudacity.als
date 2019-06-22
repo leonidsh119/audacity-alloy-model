@@ -49,7 +49,7 @@ pred Equiv[t1 : Time, t2 : Time] {
 
 pred Init[t : Time] {
 	no _tracks.t
-	Empty[Clipboard, t]
+	EmptyContainer[Clipboard, t]
 	InitHistory[t]
 	SetAction[InitAction, t]
 }
