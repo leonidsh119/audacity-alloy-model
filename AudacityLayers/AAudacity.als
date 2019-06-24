@@ -143,6 +143,7 @@ pred Cut[t, t' : Time, track : Track, from, to : Int] {
 pred Paste[t, t' : Time, track : Track, into : Int] {
 	// Precondition
 	track in _tracks.t // the track belongs to the project's tracks list
+	!EmptyContainer[Clipboard, t]
 	IsRangeDisplayed[track._window, into, into, t]
 
 	// Preserved

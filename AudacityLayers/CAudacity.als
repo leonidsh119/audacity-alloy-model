@@ -143,6 +143,7 @@ pred Cut[t, t' : Time, track : Track, from, to : Int] {
 pred Paste[t, t' : Time, track : Track, into : Int] {
 	// Precondition
 	track in _tracks.t // the track belongs to the project's tracks list
+	!EmptyContainer[Clipboard, t]
 	IsRangeDisplayed[track._window, into, into, t]
 
 	// Preserved
@@ -255,4 +256,4 @@ run {
 
 check {
 	all t : Time | Inv[t]
-} for 3 but 2 Track, 2 Sample, 2 Window, 5 seq, 5 Time, 4 Int
+} for 3 but 2 Track, 2 Sample, 2 Window, 3 seq, 3 Time, 4 Int
