@@ -215,6 +215,62 @@ pred Preserve[t, t' : Time] {
 	SetAction[PreserveAction, t']
 }
 
+pred Split[cont : BFContainer, blockIdx : Int, head, tail : BlockFile, t, t' : Time] {
+	// Precondition
+	countAllBlocks[cont, t] > 1
+	blockIdx >= 0
+	blockIdx < countAllBlocks[cont, t]
+	(#(head._samples)).add[#(tail._samples)] > 1
+
+	let block = blockForBlockIndex[cont, blockIdx, t] | {
+		// Precondition
+		block._samples = append[head._samples, tail._samples]
+
+		// Preserved
+		all bfc : BFContainer | readAllSamples[bfc, t'] = readAllSamples[bfc, t]
+		_tracks.t' = _tracks.t
+
+		// Updated
+		_blocks.t' = _blocks.t ++ cont -> insert[insert[cont._blocks.t, blockIdx, tail], blockIdx, head]
+	}
+	PreserveHistory[t, t']
+	SetAction[SplitAction, t']
+}
+
+pred Insert[cont : BFContainer, blockIdx : Int, emptyBlock : BlockFile, t, t' : Time] {
+	// Precondition
+	countAllBlocks[cont, t] > 1
+	blockIdx >= 0
+	blockIdx < countAllBlocks[cont, t]
+	#(emptyBlock._samples) = 0
+
+	// Preserved
+	all bfc : BFContainer | readAllSamples[bfc, t'] = readAllSamples[bfc, t]
+	_tracks.t' = _tracks.t
+
+	// Updated
+	_blocks.t' = _blocks.t ++ cont -> insert[cont._blocks.t, blockIdx, emptyBlock]
+	PreserveHistory[t, t']
+	SetAction[InsertAction, t']
+}
+
+pred Delete[cont : BFContainer, blockIdx : Int, t, t' : Time] {
+	// Precondition
+	countAllBlocks[cont, t] > 1
+	blockIdx >= 0
+	blockIdx < countAllBlocks[cont, t]
+	#(blockForBlockIndex[cont, blockIdx, t]._samples) = 0
+
+	// Preserved
+	all bfc : BFContainer | readAllSamples[bfc, t'] = readAllSamples[bfc, t]
+	_tracks.t' = _tracks.t
+
+	// Updated
+	_blocks.t' = _blocks.t ++ cont -> delete[cont._blocks.t, blockIdx]
+	PreserveHistory[t, t']
+	SetAction[DeleteAction, t']
+}
+
 pred Undo[t, t' : Time] {
 	UndoHistory[t, t']
 	Equiv[t', current[t']]
