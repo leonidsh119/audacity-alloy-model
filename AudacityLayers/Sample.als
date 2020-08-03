@@ -11,8 +11,8 @@ sig ID {}
 
 abstract sig Container {
 	_id : ID
-}
+} 
 
 fact {
-	_id in Container lone -> ID // Add to Sig AContainer
+	~_id in ID -> lone Container 	
 }

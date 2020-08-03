@@ -24,13 +24,14 @@ pred EmptyContainer[cont : BFContainer, t : Time] {
 
 pred ValidateContainer[cont : BFContainer, t : Time] {
 	some cont._blocks.t // Has some blocks
-	//all block : cont._blocks.t | #(block._samples) > 0 // No Empty blocks
+	all block : cont._blocks.t[Int] | #(block._samples) > 0 // No Empty blocks
 	countAllSamples[cont, t] > 1 // Not empty. Asumming at least 2 samples for being able to define a window
 }
 
 pred PreserveContainer[cont : BFContainer, t, t' : Time] {
 	cont._blocks.t' = cont._blocks.t
-	//all block : cont._blocks | block.t._samples = block.t'._samples // TODO: Fix Skolmization Error
+//	all block : cont._blocks | block.t._samples = block.t'._samples // TODO: Fix Skolmization Error
+//	all block : BlockFile | block in cont._blocks.t[Int] => block.t._samples = block.t'._samples // Try instead something like this
 	readAllSamples[cont, t] = readAllSamples[cont, t']
 }
 
