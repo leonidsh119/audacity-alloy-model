@@ -30,8 +30,7 @@ pred ValidateContainer[cont : BFContainer, t : Time] {
 
 pred PreserveContainer[cont : BFContainer, t, t' : Time] {
 	cont._blocks.t' = cont._blocks.t
-//	all block : cont._blocks | block.t._samples = block.t'._samples // TODO: Fix Skolmization Error
-//	all block : BlockFile | block in cont._blocks.t[Int] => block.t._samples = block.t'._samples // Try instead something like this
+	all block0, block1 : BlockFile, idx : Int | (block0 in cont._blocks.t[idx] && block1 in cont._blocks.t'[idx]) implies block0._samples = block1._samples
 	readAllSamples[cont, t] = readAllSamples[cont, t']
 }
 
