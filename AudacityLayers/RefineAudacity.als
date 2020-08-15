@@ -1,3 +1,5 @@
+
+open Sample
 open AContainer
 open AAudacity
 open BFContainer
@@ -17,7 +19,7 @@ pred retrieve[t : Time]
 }
 
 pred assertEqual[aCont : AContainer, cCont : BFContainer, t : Time] {
-	aCont._id = cCont._id
+	Sample/Equals[aCont, cCont]
 	AContainer/readAllSamples[aCont, t] = BFContainer/readAllSamples[cCont, t]
 }
 

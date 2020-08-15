@@ -26,7 +26,7 @@ pred Empty[block : BlockFile] {
 	countSamples[block] = 0
 }
 
-pred Equiv[block0, block1 : BlockFile] {
+pred Equals[block0, block1 : BlockFile] {
 	block0._samples = block1._samples
 }
 

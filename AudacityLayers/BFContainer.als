@@ -29,7 +29,7 @@ pred Init[cont : BFContainer, t : Time] {
 
 pred Equiv[cont : BFContainer, t, t' : Time] {
 	cont._blocks.t' = cont._blocks.t
-	all block0, block1 : BlockFile, idx : Int | (block0 in cont._blocks.t[idx] && block1 in cont._blocks.t'[idx]) implies BlockFile/Equiv[block0, block1]
+	all block0, block1 : BlockFile, idx : Int | (block0 in cont._blocks.t[idx] && block1 in cont._blocks.t'[idx]) implies BlockFile/Equals[block0, block1]
 	readAllSamples[cont, t] = readAllSamples[cont, t']
 }
 
@@ -48,11 +48,11 @@ pred ExtractSamples[contSrc, contOut : BFContainer, from, to : Int, t, t' : Time
 
 		// Preserved
 		contSrc._blocks.t' = contSrc._blocks.t
-		all i : range[0, countAllBlocks[contSrc, t]] - range[firstCutBlockIndex, lastCutBlockIndex] | BlockFile/Equiv[blockForBlockIndex[contSrc, i, t'], blockForBlockIndex[contSrc, i, t]]
+		all i : range[0, countAllBlocks[contSrc, t]] - range[firstCutBlockIndex, lastCutBlockIndex] | BlockFile/Equals[blockForBlockIndex[contSrc, i, t'], blockForBlockIndex[contSrc, i, t]]
 
 		// Updated
 		all i : range[firstCutBlockIndex, lastCutBlockIndex] | BlockFile/Empty[blockForBlockIndex[contSrc, i, t']]
-		all i : range[firstCutBlockIndex, lastCutBlockIndex] | BlockFile/Equiv[blockForBlockIndex[contOut, sub[i, firstCutBlockIndex], t'], blockForBlockIndex[contSrc, i, t]]
+		all i : range[firstCutBlockIndex, lastCutBlockIndex] | BlockFile/Equals[blockForBlockIndex[contOut, sub[i, firstCutBlockIndex], t'], blockForBlockIndex[contSrc, i, t]]
 	}
 }
 
@@ -64,10 +64,10 @@ pred InsertSamples[cont1, cont2 : BFContainer, into : Int, t, t' : Time] {
 		all i : range[0, countAllBlocks[cont1, t]] - range[firstEmptyBlockIndex, lastEmptyBlockIndex] | !BlockFile/Empty[blockForBlockIndex[cont1, i, t]]
 
 		// Preserved
-		all i : range[0, countAllBlocks[cont1, t]] - range[firstEmptyBlockIndex, lastEmptyBlockIndex] | BlockFile/Equiv[blockForBlockIndex[cont1, i, t'], blockForBlockIndex[cont1, i, t]]
+		all i : range[0, countAllBlocks[cont1, t]] - range[firstEmptyBlockIndex, lastEmptyBlockIndex] | BlockFile/Equals[blockForBlockIndex[cont1, i, t'], blockForBlockIndex[cont1, i, t]]
 
 		// Updated
-		all i : range[firstEmptyBlockIndex, lastEmptyBlockIndex] | BlockFile/Equiv[blockForBlockIndex[cont1, i, t'], blockForBlockIndex[cont2, sub[i, firstEmptyBlockIndex], t]]
+		all i : range[firstEmptyBlockIndex, lastEmptyBlockIndex] | BlockFile/Equals[blockForBlockIndex[cont1, i, t'], blockForBlockIndex[cont2, sub[i, firstEmptyBlockIndex], t]]
 	}
 }
 
