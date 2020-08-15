@@ -41,7 +41,7 @@ pred Empty[cont : BFContainer, t : Time] {
 pred ExtractSamples[contSrc, contOut : BFContainer, from, to : Int, t, t' : Time] {
 	let firstCutBlockIndex = blockIndexForSampleIndex[contSrc, from, t],  lastCutBlockIndex = blockIndexForSampleIndex[contSrc, to, t] | {
 		// Precondition
-		all block : contSrc._blocks.t | !BlockFile/Empty[block.t]	
+		all block : contSrc._blocks.t[Int] | BlockFile/Inv[block]	
 		sampleIndexInBlockForSampleIndex[contSrc, from, t] = 0 // "from" is the first sample in its block
 		sampleIndexInBlockForSampleIndex[contSrc, to, t] = sub[BlockFile/countSamples[blockForBlockIndex[contSrc, lastCutBlockIndex, t]], 1] // "to" is the last sample in its block
 		countAllBlocks[contOut, t] = sub[lastCutBlockIndex, firstCutBlockIndex] // required number of blocks in clipboard. what skip action achieves that?

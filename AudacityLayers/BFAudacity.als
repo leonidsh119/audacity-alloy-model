@@ -1,4 +1,4 @@
-module CAudacity
+module BFAudacity
 
 open Time
 open BlockFile
@@ -34,13 +34,12 @@ pred Inv[t : Time] {
 		BFWindow/Inv[track._window, t] &&
 		getEnd[track._window, t] < countAllSamples[track, t] &&
 		readAllSamples[track._window, t] = readSamples[track, getStart[track._window, t], getEnd[track._window, t], t] // All samples in window are from samples of track in the window's range
-
 	this/Equiv[t, current[t]]
 }
 
 pred Init[t : Time] {
 	no _tracks.t
-	BFContainer/Empty[Clipboard, t]
+	BFContainer/Init[Clipboard, t]
 	History/Init[t]
 	SetAction[InitAction, t]
 }
