@@ -22,7 +22,7 @@ pred Inv[cont : AContainer, t : Time] {
 }
 
 pred Init[cont : AContainer, t : Time] {
-	Empty[cont, t]
+	this/Empty[cont, t]
 }
 
 pred Equiv[cont : AContainer, t, t' : Time] {
@@ -50,14 +50,6 @@ pred InsertSamples[cont1, cont2 : AContainer, into : Int, t, t' : Time] {
 //                                                Functions                                               //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-fun readAllSamples[cont : AContainer, t : Time] : seq Sample {
-	cont._samples.t
-}
-
-fun readSamples[cont : AContainer, from, to : Int, t : Time] : seq Sample {
-	subseq[cont._samples.t, from, to]
-}
-
 fun lastContSampleIdx[cont : AContainer, t : Time] : Int {
 	countAllSamples[cont, t].sub[1]
 }
@@ -66,6 +58,14 @@ fun countAllSamples[cont : AContainer, t : Time] : Int {
 	#readAllSamples[cont, t]
 }
 
+fun readAllSamples[cont : AContainer, t : Time] : seq Sample {
+	cont._samples.t
+}
+
 fun countSamples[cont : AContainer, from, to : Int, t : Time] : Int {
 	#readSamples[cont, from, to, t]
+}
+
+fun readSamples[cont : AContainer, from, to : Int, t : Time] : seq Sample {
+	subseq[cont._samples.t, from, to]
 }

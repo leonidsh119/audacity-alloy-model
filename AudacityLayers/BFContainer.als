@@ -19,17 +19,17 @@ abstract sig BFContainer extends Container {
 
 pred Inv[cont : BFContainer, t : Time] {
 	some cont._blocks.t // Has some blocks
-	all block : cont._blocks.t[Int] | #(block._samples) > 0 // No Empty blocks
+	all block : cont._blocks.t[Int] | BlockFile/Inv[block] // No Empty blocks
 	countAllSamples[cont, t] > 1 // Not empty. Asumming at least 2 samples for being able to define a window
 }
 
 pred Init[cont : BFContainer, t : Time] {
-	Empty[cont, t]
+	this/Empty[cont, t]
 }
 
 pred Equiv[cont : BFContainer, t, t' : Time] {
 	cont._blocks.t' = cont._blocks.t
-	all block0, block1 : BlockFile, idx : Int | (block0 in cont._blocks.t[idx] && block1 in cont._blocks.t'[idx]) implies block0._samples = block1._samples
+	all block0, block1 : BlockFile, idx : Int | (block0 in cont._blocks.t[idx] && block1 in cont._blocks.t'[idx]) implies BlockFile/Equiv[block0, block1]
 	readAllSamples[cont, t] = readAllSamples[cont, t']
 }
 
@@ -41,18 +41,18 @@ pred Empty[cont : BFContainer, t : Time] {
 pred ExtractSamples[contSrc, contOut : BFContainer, from, to : Int, t, t' : Time] {
 	let firstCutBlockIndex = blockIndexForSampleIndex[contSrc, from, t],  lastCutBlockIndex = blockIndexForSampleIndex[contSrc, to, t] | {
 		// Precondition
-		all block : contSrc._blocks.t | #(block._samples) > 0	
+		all block : contSrc._blocks.t | !BlockFile/Empty[block.t]	
 		sampleIndexInBlockForSampleIndex[contSrc, from, t] = 0 // "from" is the first sample in its block
-		sampleIndexInBlockForSampleIndex[contSrc, to, t] = sub[#(blockForBlockIndex[contSrc, lastCutBlockIndex, t]._samples), 1] // "to" is the last sample in its block
+		sampleIndexInBlockForSampleIndex[contSrc, to, t] = sub[BlockFile/countSamples[blockForBlockIndex[contSrc, lastCutBlockIndex, t]], 1] // "to" is the last sample in its block
 		countAllBlocks[contOut, t] = sub[lastCutBlockIndex, firstCutBlockIndex] // required number of blocks in clipboard. what skip action achieves that?
 
 		// Preserved
 		contSrc._blocks.t' = contSrc._blocks.t
-		all i : range[0, countAllBlocks[contSrc, t]] - range[firstCutBlockIndex, lastCutBlockIndex] | blockForBlockIndex[contSrc, i, t']._samples = blockForBlockIndex[contSrc, i, t]._samples
+		all i : range[0, countAllBlocks[contSrc, t]] - range[firstCutBlockIndex, lastCutBlockIndex] | BlockFile/Equiv[blockForBlockIndex[contSrc, i, t'], blockForBlockIndex[contSrc, i, t]]
 
 		// Updated
-		all i : range[firstCutBlockIndex, lastCutBlockIndex] | no blockForBlockIndex[contSrc, i, t']._samples
-		all i : range[firstCutBlockIndex, lastCutBlockIndex] | blockForBlockIndex[contOut, sub[i, firstCutBlockIndex], t']._samples = blockForBlockIndex[contSrc, i, t]._samples
+		all i : range[firstCutBlockIndex, lastCutBlockIndex] | BlockFile/Empty[blockForBlockIndex[contSrc, i, t']]
+		all i : range[firstCutBlockIndex, lastCutBlockIndex] | BlockFile/Equiv[blockForBlockIndex[contOut, sub[i, firstCutBlockIndex], t'], blockForBlockIndex[contSrc, i, t]]
 	}
 }
 
@@ -60,14 +60,14 @@ pred InsertSamples[cont1, cont2 : BFContainer, into : Int, t, t' : Time] {
 	let firstEmptyBlockIndex = add[blockIndexForSampleIndex[cont1, sub[into, 1], t], 1],  lastEmptyBlockIndex = add[firstEmptyBlockIndex, countAllBlocks[cont2, t]] | {
 		// Precondition
 //		all block : cont1._blocks | block.t' = block.t // The assumption is that all needed blocks are already prepared and in this method only filled up with samples
-		all i : range[firstEmptyBlockIndex, lastEmptyBlockIndex] | #(blockForBlockIndex[cont1, i, t]._samples) = 0
-		all i : range[0, countAllBlocks[cont1, t]] - range[firstEmptyBlockIndex, lastEmptyBlockIndex] | #(blockForBlockIndex[cont1, i, t]._samples) > 0
+		all i : range[firstEmptyBlockIndex, lastEmptyBlockIndex] | BlockFile/Empty[blockForBlockIndex[cont1, i, t]]
+		all i : range[0, countAllBlocks[cont1, t]] - range[firstEmptyBlockIndex, lastEmptyBlockIndex] | !BlockFile/Empty[blockForBlockIndex[cont1, i, t]]
 
 		// Preserved
-		all i : range[0, countAllBlocks[cont1, t]] - range[firstEmptyBlockIndex, lastEmptyBlockIndex] | blockForBlockIndex[cont1, i, t']._samples = blockForBlockIndex[cont1, i, t]._samples
+		all i : range[0, countAllBlocks[cont1, t]] - range[firstEmptyBlockIndex, lastEmptyBlockIndex] | BlockFile/Equiv[blockForBlockIndex[cont1, i, t'], blockForBlockIndex[cont1, i, t]]
 
 		// Updated
-		all i : range[firstEmptyBlockIndex, lastEmptyBlockIndex] | blockForBlockIndex[cont1, i, t']._samples = blockForBlockIndex[cont2, sub[i, firstEmptyBlockIndex], t]._samples
+		all i : range[firstEmptyBlockIndex, lastEmptyBlockIndex] | BlockFile/Equiv[blockForBlockIndex[cont1, i, t'], blockForBlockIndex[cont2, sub[i, firstEmptyBlockIndex], t]]
 	}
 }
 
@@ -120,7 +120,7 @@ fun readSamples[cont : BFContainer, from, to : Int, t : Time] : seq Sample {
 
 // For the given sample index in the entire track provides the block index the sample belongs to
 fun readSample[cont : BFContainer, sampleIdx : Int, t : Time] : Sample {
-	blockForSampleIndex[cont, sampleIdx, t]._samples[sampleIndexInBlockForSampleIndex[cont, sampleIdx, t]]
+	BlockFile/readSample[blockForSampleIndex[cont, sampleIdx, t], sampleIndexInBlockForSampleIndex[cont, sampleIdx, t]]
 }
 
 // For the given sample index in the entire track provides the block the sample belongs to
@@ -147,7 +147,7 @@ fun blockIndexForSampleIndex[cont : BFContainer, sampleIdx : Int, t : Time] : In
 // Count the number of samples in block subsequence from start upto blockIdx (not including).
 // This is actually the index of the first sample in the block j
 fun prec[cont : BFContainer, blockIdx : Int, t : Time] : Int {
-	sum k : range[0, blockIdx] | #((cont._blocks.t)[k]._samples)
+	sum k : range[0, blockIdx] | BlockFile/countSamples[(cont._blocks.t)[k]]
 }
 
 // Creates a list of integers in range [from, to)

@@ -10,5 +10,35 @@ let MAX_BLOCK_SIZE = 4
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 sig BlockFile {
-	_samples : seq Sample
-} { #_samples <= MAX_BLOCK_SIZE }
+	_samplez : seq Sample
+} { #_samplez <= MAX_BLOCK_SIZE }
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+//                                             Predicates                                                //
+////////////////////////////////////////////////////////////////////////////////////////////
+
+pred Inv[block : BlockFile] {
+	!this/Empty[block]
+}
+
+pred Empty[block : BlockFile] {
+	countSamples[block] = 0
+}
+
+pred Equiv[block0, block1 : BlockFile] {
+	block0._samplez = block1._samplez
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+//                                                Functions                                               //
+////////////////////////////////////////////////////////////////////////////////////////////
+
+fun countSamples[block : BlockFile] : Int {
+	#(block._samplez)
+}
+
+fun readSample[block : BlockFile, sampleIdx : Int] : Sample {
+	block._samplez[sampleIdx]
+}
