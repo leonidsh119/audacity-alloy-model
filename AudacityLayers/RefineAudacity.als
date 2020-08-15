@@ -1,38 +1,39 @@
-// TODO: Adapt for modularized objects
-
-open CommonAudacity
-open AbstractAudacity
-open ConcreteAudacity 
+open AContainer
+open AAudacity
+open BFContainer
+open BFAudacity
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                             Predicates
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-pred retrieve[at : AbstractAudacity/Time, ct : ConcreteAudacity/Time]
+pred retrieve[t : Time]
 {
-	all aCont : AbstractAudacity/SamplesContainer | 	{
-		one cCont : ConcreteAudacity/BlockFileContainer |
-			aCont._id = cCont._id and
-			assertEqual[aCont, at, cCont, ct]
+	all aCont : AContainer | 	{
+		one cCont : BFContainer |
+			assertEqual[aCont, cCont, t]
 	}
 }
 
-pred assertEqual[aCont : AbstractAudacity/SamplesContainer, at : AbstractAudacity/Time, cCont : ConcreteAudacity/BlockFileContainer, ct : ConcreteAudacity/Time] {
-	AbstractAudacity/readAllSamples[aCont, at] = ConcreteAudacity/readAllSamples[cCont, ct]
+pred assertEqual[aCont : AContainer, cCont : BFContainer, t : Time] {
+	aCont._id = cCont._id
+	AContainer/readAllSamples[aCont, t] = BFContainer/readAllSamples[cCont, t]
 }
 
 // Asserts for Sample-wise equality between sequence of Blocks and a sequence of Samples
-pred assertEqual2[aCont : AbstractAudacity/SamplesContainer, at : AbstractAudacity/Time, cCont : ConcreteAudacity/BlockFileContainer, ct : ConcreteAudacity/Time] {
-	#(aCont._samples.at) = (sum i : (cCont._blocks.ct).BlockFile | #(cCont._blocks.ct)[i]._samples) // compare total number of samples in both models
+// This assertion may be stronger because it doesn't rely on readAllSamples implementaiton in both AContainer and BFContainer 
+// Otherwise we actually find ourselves prroving the formal model soecification by using the specification itself.
+pred assertEqual2[aCont : AContainer, cCont : BFContainer, t : Time] {
+	#(aCont._samples.t) = (sum i : (cCont._blocks.t).BlockFile | #(cCont._blocks.t)[i]._samples) // compare total number of samples in both models
 	some offsets : seq Int | {
 		all i, j : offsets.Int | int[i] <= int[j] =>offsets[i] <= offsets[j] // Monotonic
-		offsets.Int in (aCont._samples.at).Sample
-		all i : (cCont._blocks.ct).BlockFile | {
-			(aCont._samples.at).subseq[offsets[i], #(cCont._blocks.ct)[i]._samples] = (cCont._blocks.ct)[i]._samples
+		offsets.Int in (aCont._samples.t).Sample
+		all i : (cCont._blocks.t).BlockFile | {
+			(aCont._samples.t).subseq[offsets[i], #(cCont._blocks.t)[i]._samples] = (cCont._blocks.t)[i]._samples
 		}
-		all i : (cCont._blocks.ct).BlockFile - 0 | {
-			offsets[i].sub[offsets[i.sub[1]]] = #(cCont._blocks.ct)[i]._samples // offsets[i] - offsets[i-1] = # blocks[i]._samples
+		all i : (cCont._blocks.t).BlockFile - 0 | {
+			offsets[i].sub[offsets[i.sub[1]]] = #(cCont._blocks.t)[i]._samples // offsets[i] - offsets[i-1] = # blocks[i]._samples
 		}
 	}
 }
@@ -43,21 +44,21 @@ pred assertEqual2[aCont : AbstractAudacity/SamplesContainer, at : AbstractAudaci
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 check {
-	all at, at' : AbstractAudacity/Time, aTrack : AbstractAudacity/Track, ct, ct' : ConcreteAudacity/Time, cTrack : ConcreteAudacity/Track, from, to : Int | 
-		(retrieve[at, ct] and retrieve[at', ct']) => (AbstractAudacity/Cut[at, at', aTrack, from, to] iff ConcreteAudacity/Cut[ct, ct', cTrack, from, to])
+	all t, t' : Time, aTrack : AAudacity/Track, cTrack : BFAudacity/Track, from, to : Int | 
+		(retrieve[t] and retrieve[t']) => (AAudacity/Cut[t, t', aTrack, from, to] iff BFAudacity/Cut[t, t', cTrack, from, to])
 } 
 
 check {
-	all at, at' : AbstractAudacity/Time, ct, ct' : ConcreteAudacity/Time | 
-		(retrieve[at, ct] and retrieve[at', ct']) => (all cont : BlockFileContainer,  blockIdx : Int, head, tail : BlockFile | ConcreteAudacity/Split[cont, blockIdx, head, tail, ct, ct'] => AbstractAudacity/Skip[at, at'])
+	all t, t' : Time | 
+		(retrieve[t] and retrieve[t']) => (all cont : BFContainer,  blockIdx : Int, head, tail : BlockFile | BFAudacity/Split[cont, blockIdx, head, tail, t, t'] => AAudacity/Preserve[t, t'])
 } 
 
 check {
-	all at, at' : AbstractAudacity/Time, ct, ct' : ConcreteAudacity/Time | 
-		(retrieve[at, ct] and retrieve[at', ct']) => (all cont : BlockFileContainer,  blockIdx : Int, emptyBlock : BlockFile | ConcreteAudacity/Insert[cont, blockIdx, emptyBlock, ct, ct'] => AbstractAudacity/Skip[at, at'])
+	all t, t' : Time | 
+		(retrieve[t] and retrieve[t']) => (all cont : BFContainer,  blockIdx : Int, emptyBlock : BlockFile | BFAudacity/Insert[cont, blockIdx, emptyBlock, t, t'] => AAudacity/Preserve[t, t'])
 } 
 
 check {
-	all at, at' : AbstractAudacity/Time, ct, ct' : ConcreteAudacity/Time | 
-		(retrieve[at, ct] and retrieve[at', ct']) => (all cont : BlockFileContainer,  blockIdx : Int | ConcreteAudacity/Delete[cont, blockIdx, ct, ct'] => AbstractAudacity/Skip[at, at'])
+	all t, t' : Time | 
+		(retrieve[t] and retrieve[t']) => (all cont : BFContainer,  blockIdx : Int | BFAudacity/Delete[cont, blockIdx, t, t'] => AAudacity/Preserve[t, t'])
 }
