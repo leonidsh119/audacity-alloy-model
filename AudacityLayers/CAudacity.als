@@ -28,49 +28,48 @@ fact {
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 pred Inv[t : Time] {
-	all track : _tracks.t | Validate[track, t]
-	Equiv[t, current[t]]
-}
+	all track : _tracks.t | 
+		BFContainer/Inv[track, t] &&
+		BFWindow/Inv[track._window, t] &&
+		getEnd[track._window, t] < countAllSamples[track, t] &&
+		readAllSamples[track._window, t] = readSamples[track, getStart[track._window, t], getEnd[track._window, t], t] // All samples in window are from samples of track in the window's range
 
-pred Validate[track : Track, t : Time] {
-	ValidateContainer[track, t]
-	ValidateWindow[track._window, t]
-	getEnd[track._window, t] < countAllSamples[track, t]
-	readAllSamples[track._window, t] = readSamples[track, getStart[track._window, t], getEnd[track._window, t], t] // All samples in window are from samples of track in the window's range
-}
-
-pred Equiv[t1 : Time, t2 : Time] {
-	_tracks.t1 = _tracks.t2
-	PreserveContainer[Clipboard, t1, t2]
-	all track : _tracks.t1 |
-		PreserveContainer[track, t1, t2] &&
-		PreserveWindow[track._window, t1, t2]
+	this/Equiv[t, current[t]]
 }
 
 pred Init[t : Time] {
 	no _tracks.t
-	EmptyContainer[Clipboard, t]
-	InitHistory[t]
+	BFContainer/Empty[Clipboard, t]
+	History/Init[t]
 	SetAction[InitAction, t]
+}
+
+pred Equiv[t1 : Time, t2 : Time] {
+	_tracks.t1 = _tracks.t2
+	BFContainer/Equiv[Clipboard, t1, t2]
+	all track : _tracks.t1 |
+		BFContainer/Equiv[track, t1, t2] &&
+		BFWindow/Equiv[track._window, t1, t2]
+	// NOTE: No History/Equiv[] is here, to allow the Audacyty state to be the same in t1 and t2, but different appeearences in Undo/Redo stack
 }
 
 pred Import[t, t' : Time, track : Track] {
 	// Precondition
 	track !in _tracks.t // this is a new track that doesn't belongs to the prject's tracks list
-	ValidateContainer[track, t]
-	ValidateWindow[track._window, t]
+	BFContainer/Inv[track, t]
+	BFWindow/Inv[track._window, t]
 
 	// Preserved
-	PreserveContainer[Clipboard, t, t']
-	PreserveContainer[track, t, t']
+	BFContainer/Equiv[Clipboard, t, t']
+	BFContainer/Equiv[track, t, t']
 	all otherTrack : _tracks.t | 
-		PreserveContainer[otherTrack, t, t'] &&
-		PreserveWindow[otherTrack._window, t, t']
+		BFContainer/Equiv[otherTrack, t, t'] &&
+		BFWindow/Equiv[otherTrack._window, t, t']
 
 	// Updated
 	_tracks.t' = _tracks.t + track
 	SetWindow[track._window, 0, lastContSampleIdx[track, t], readAllSamples[track, t], t']
-	AdvanceHistory[t, t']
+	History/Advance[t, t']
 	SetAction[ImportAction, t']
 }
 
@@ -129,29 +128,29 @@ pred Cut[t, t' : Time, track : Track, from, to : Int] {
 	// Preserved
 	_tracks.t' = _tracks.t
 	all otherTrack : _tracks.t | 
-		PreserveContainer[otherTrack, t, t'] &&
-		PreserveWindow[otherTrack._window, t, t']
+		BFContainer/Equiv[otherTrack, t, t'] &&
+		BFWindow/Equiv[otherTrack._window, t, t']
 
 	// Updated
 	readSamples[track, 0, from.sub[1], t'] = readSamples[track, 0, from.sub[1], t]
 	readAllSamples[Clipboard, t'] = readSamples[track, from, to, t]
 	readSamples[track, from, lastContSampleIdx[track, t'], t'] = readSamples[track, to.add[1], lastContSampleIdx[track, t], t]
 	CutNoMove[t, t', track, from, to] or CutMove[t, t', track, from, to] or CutZoomIn[t, t', track, from, to]
-	AdvanceHistory[t, t']
+	History/Advance[t, t']
 }
 
 pred Paste[t, t' : Time, track : Track, into : Int] {
 	// Precondition
 	track in _tracks.t // the track belongs to the project's tracks list
-	!EmptyContainer[Clipboard, t]
+	!BFContainer/Empty[Clipboard, t]
 	IsRangeDisplayed[track._window, into, into, t]
 
 	// Preserved
 	_tracks.t' = _tracks.t
-	PreserveContainer[Clipboard, t, t']
+	BFContainer/Equiv[Clipboard, t, t']
 	all otherTrack : _tracks.t - track | 
-		PreserveContainer[otherTrack, t, t'] &&
-		PreserveWindow[otherTrack._window, t, t']
+		BFContainer/Equiv[otherTrack, t, t'] &&
+		BFWindow/Equiv[otherTrack._window, t, t']
 
 	// Updated
 	InsertSamples[track, Clipboard, into, t, t']
@@ -161,7 +160,7 @@ pred Paste[t, t' : Time, track : Track, into : Int] {
 		getEnd[track._window, t], 
 		readSamples[track, getStart[track._window, t], getEnd[track._window, t], t'], 
 		t']
-	AdvanceHistory[t, t']
+	History/Advance[t, t']
 	SetAction[PasteAction, t']
 }
 
@@ -174,15 +173,15 @@ pred ZoomIn[t , t' : Time, track : Track, newStart, newEnd : Int] {
 	
 	// Preserved
 	_tracks.t' = _tracks.t
-	PreserveContainer[Clipboard, t, t']
-	PreserveContainer[track, t, t']
+	BFContainer/Equiv[Clipboard, t, t']
+	BFContainer/Equiv[track, t, t']
 	all otherTrack : _tracks.t - track | 
-		PreserveContainer[otherTrack, t, t'] &&
-		PreserveWindow[otherTrack._window, t, t']
+		BFContainer/Equiv[otherTrack, t, t'] &&
+		BFWindow/Equiv[otherTrack._window, t, t']
 
 	// Updated
 	SetWindow[track._window, newStart, newEnd, readSamples[track, newStart, newEnd, t], t']
-	AdvanceHistory[t, t']
+	History/Advance[t, t']
 	SetAction[ZoomInAction, t']
 }
 
@@ -197,21 +196,21 @@ pred ZoomOut[t , t' : Time, track : Track, newStart, newEnd : Int] {
 
 	// Preserved
 	_tracks.t' = _tracks.t
-	PreserveContainer[Clipboard, t, t']
-	PreserveContainer[track, t, t']
+	BFContainer/Equiv[Clipboard, t, t']
+	BFContainer/Equiv[track, t, t']
 	all otherTrack : _tracks.t - track | 
-		PreserveContainer[otherTrack, t, t'] &&
-		PreserveWindow[otherTrack._window, t, t']
+		BFContainer/Equiv[otherTrack, t, t'] &&
+		BFWindow/Equiv[otherTrack._window, t, t']
 
 	// Updated
 	SetWindow[track._window, newStart, newEnd, readSamples[track, newStart, newEnd, t], t']
-	AdvanceHistory[t, t']
+	History/Advance[t, t']
 	SetAction[ZoomInAction, t']
 }
 
 pred Preserve[t, t' : Time] {
-	Equiv[t, t']
-	PreserveHistory[t, t']
+	this/Equiv[t, t']
+	History/Equiv[t, t']
 	SetAction[PreserveAction, t']
 }
 
@@ -233,7 +232,7 @@ pred Split[cont : BFContainer, blockIdx : Int, head, tail : BlockFile, t, t' : T
 		// Updated
 		_blocks.t' = _blocks.t ++ cont -> insert[insert[cont._blocks.t, blockIdx, tail], blockIdx, head]
 	}
-	PreserveHistory[t, t']
+	History/Equiv[t, t']
 	SetAction[SplitAction, t']
 }
 
@@ -250,7 +249,7 @@ pred Insert[cont : BFContainer, blockIdx : Int, emptyBlock : BlockFile, t, t' : 
 
 	// Updated
 	_blocks.t' = _blocks.t ++ cont -> insert[cont._blocks.t, blockIdx, emptyBlock]
-	PreserveHistory[t, t']
+	History/Equiv[t, t']
 	SetAction[InsertAction, t']
 }
 
@@ -267,19 +266,19 @@ pred Delete[cont : BFContainer, blockIdx : Int, t, t' : Time] {
 
 	// Updated
 	_blocks.t' = _blocks.t ++ cont -> delete[cont._blocks.t, blockIdx]
-	PreserveHistory[t, t']
+	History/Equiv[t, t']
 	SetAction[DeleteAction, t']
 }
 
 pred Undo[t, t' : Time] {
-	UndoHistory[t, t']
-	Equiv[t', current[t']]
+	History/Undo[t, t']
+	this/Equiv[t', current[t']]
 	SetAction[UndoAction, t']
 }
 
 pred Redo[t, t' : Time] {
-	RedoHistory[t, t']
-	Equiv[t', current[t']]
+	History/Redo[t, t']
+	this/Equiv[t', current[t']]
 	SetAction[RedoAction, t']
 }
 

@@ -18,14 +18,14 @@ sig Window extends BFContainer {
 //                                             Predicates                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-pred ValidateWindow[window : Window, t : Time] {
-	ValidateContainer[window, t]
+pred Inv[window : Window, t : Time] {
+	BFContainer/Inv[window, t]
 	window._start.t >= 0
 	window._end.t > window._start.t
 }
 
-pred PreserveWindow[window : Window, t, t' : Time] {
-	PreserveContainer[window, t, t']
+pred Equiv[window : Window, t, t' : Time] {
+	BFContainer/Equiv[window, t, t']
 	window._start.t' = window._start.t
 	window._end.t' = window._end.t
 }
@@ -34,7 +34,7 @@ pred SetWindow[window : Window, start, end : Int, winsamples : seq Sample, t : T
 	// Precondition
 	start >= 0
 	end >= start
-	ValidateContainer[window, t]
+	BFContainer/Inv[window, t]
 	end.sub[start].add[1] = countAllSamples[window, t]
 
 	// Updated

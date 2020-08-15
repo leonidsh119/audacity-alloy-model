@@ -17,21 +17,25 @@ abstract sig BFContainer extends Container {
 //                                             Predicates                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-pred EmptyContainer[cont : BFContainer, t : Time] {
-	no cont._blocks.t
-	countAllSamples[cont, t] = 0
-}
-
-pred ValidateContainer[cont : BFContainer, t : Time] {
+pred Inv[cont : BFContainer, t : Time] {
 	some cont._blocks.t // Has some blocks
 	all block : cont._blocks.t[Int] | #(block._samples) > 0 // No Empty blocks
 	countAllSamples[cont, t] > 1 // Not empty. Asumming at least 2 samples for being able to define a window
 }
 
-pred PreserveContainer[cont : BFContainer, t, t' : Time] {
+pred Init[cont : BFContainer, t : Time] {
+	Empty[cont, t]
+}
+
+pred Equiv[cont : BFContainer, t, t' : Time] {
 	cont._blocks.t' = cont._blocks.t
 	all block0, block1 : BlockFile, idx : Int | (block0 in cont._blocks.t[idx] && block1 in cont._blocks.t'[idx]) implies block0._samples = block1._samples
 	readAllSamples[cont, t] = readAllSamples[cont, t']
+}
+
+pred Empty[cont : BFContainer, t : Time] {
+	no cont._blocks.t
+	countAllSamples[cont, t] = 0
 }
 
 pred ExtractSamples[contSrc, contOut : BFContainer, from, to : Int, t, t' : Time] {

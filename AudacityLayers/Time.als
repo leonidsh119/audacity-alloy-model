@@ -13,7 +13,7 @@ abstract sig Action {
 	_action : set Time
 }
 
-one sig InitAction, ImportAction, CutNoMoveAction, CutMoveAction, CutZoomInAction, PasteAction, ZoomInAction , ZoomOutAction, UndoAction, RedoAction, SplitAction, InsertAction, DeleteAction extends Action {}
+one sig InitAction, ImportAction, CutNoMoveAction, CutMoveAction, CutZoomInAction, PasteAction, ZoomInAction , ZoomOutAction, PreserveAction, UndoAction, RedoAction, SplitAction, InsertAction, DeleteAction extends Action {}
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
