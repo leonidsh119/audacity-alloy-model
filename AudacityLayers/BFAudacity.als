@@ -289,7 +289,7 @@ pred Redo[t, t' : Time] {
 
 fact {
 	this/Init[first]
-	all t, t' : Time | t -> t' in next => 
+	all t, t' : Time | t -> t' in next implies 
 		some track : Track, i, j : Int |
 			Import[t, t', track]
 			or Cut[t, t', track, i, j]
