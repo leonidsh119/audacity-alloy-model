@@ -10,8 +10,8 @@ let MAX_BLOCK_SIZE = 4
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 sig BlockFile {
-	_samplez : seq Sample
-} { #_samplez <= MAX_BLOCK_SIZE }
+	_samples : seq Sample
+} { #_samples <= MAX_BLOCK_SIZE }
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////
@@ -27,18 +27,21 @@ pred Empty[block : BlockFile] {
 }
 
 pred Equiv[block0, block1 : BlockFile] {
-	block0._samplez = block1._samplez
+	block0._samples = block1._samples
 }
 
+pred Merge[block, head, tail : BlockFile] {
+	block._samples = append[head._samples, tail._samples]
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////
 //                                                Functions                                               //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
 fun countSamples[block : BlockFile] : Int {
-	#(block._samplez)
+	#(block._samples)
 }
 
 fun readSample[block : BlockFile, sampleIdx : Int] : Sample {
-	block._samplez[sampleIdx]
+	block._samples[sampleIdx]
 }

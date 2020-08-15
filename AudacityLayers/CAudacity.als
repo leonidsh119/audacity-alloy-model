@@ -1,6 +1,7 @@
 module CAudacity
 
 open Time
+open BlockFile
 open BFContainer
 open BFWindow
 open History
@@ -219,11 +220,11 @@ pred Split[cont : BFContainer, blockIdx : Int, head, tail : BlockFile, t, t' : T
 	countAllBlocks[cont, t] > 1
 	blockIdx >= 0
 	blockIdx < countAllBlocks[cont, t]
-	(#(head._samples)).add[#(tail._samples)] > 1
+	(BlockFile/countSamples[head]).add[BlockFile/countSamples[tail]] > 1
 
 	let block = blockForBlockIndex[cont, blockIdx, t] | {
 		// Precondition
-		block._samples = append[head._samples, tail._samples]
+		BlockFile/Merge[block, head, tail]
 
 		// Preserved
 		all bfc : BFContainer | readAllSamples[bfc, t'] = readAllSamples[bfc, t]
@@ -241,7 +242,7 @@ pred Insert[cont : BFContainer, blockIdx : Int, emptyBlock : BlockFile, t, t' : 
 	countAllBlocks[cont, t] > 1
 	blockIdx >= 0
 	blockIdx < countAllBlocks[cont, t]
-	#(emptyBlock._samples) = 0
+	BlockFile/Empty[emptyBlock]
 
 	// Preserved
 	all bfc : BFContainer | readAllSamples[bfc, t'] = readAllSamples[bfc, t]
@@ -258,7 +259,7 @@ pred Delete[cont : BFContainer, blockIdx : Int, t, t' : Time] {
 	countAllBlocks[cont, t] > 1
 	blockIdx >= 0
 	blockIdx < countAllBlocks[cont, t]
-	#(blockForBlockIndex[cont, blockIdx, t]._samples) = 0
+	BlockFile/Empty[blockForBlockIndex[cont, blockIdx, t]]
 
 	// Preserved
 	all bfc : BFContainer | readAllSamples[bfc, t'] = readAllSamples[bfc, t]
