@@ -1,3 +1,5 @@
+// TODO: Adapt for modularized objects
+
 open CommonAudacity
 open AbstractAudacity
 open ConcreteAudacity 

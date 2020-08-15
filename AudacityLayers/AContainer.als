@@ -17,16 +17,20 @@ abstract sig AContainer extends Container {
 //                                             Predicates                                                //
 ////////////////////////////////////////////////////////////////////////////////////////////
 
-pred EmptyContainer[cont : AContainer, t : Time] {
-	countAllSamples[cont, t] = 0
-}
-
-pred ValidateContainer[cont : AContainer, t : Time] {
+pred Inv[cont : AContainer, t : Time] {
 	countAllSamples[cont, t] > 1 // Not empty. Asumming at least 2 samples for being able to define a window
 }
 
-pred PreserveContainer[cont : AContainer, t, t' : Time] {
+pred Init[cont : AContainer, t : Time] {
+	Empty[cont, t]
+}
+
+pred Equiv[cont : AContainer, t, t' : Time] {
 	readAllSamples[cont, t] = readAllSamples[cont, t']
+}
+
+pred Empty[cont : AContainer, t : Time] {
+	countAllSamples[cont, t] = 0
 }
 
 pred ExtractSamples[contSrc, contOut : AContainer, from, to : Int, t, t' : Time] {
